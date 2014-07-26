@@ -1,0 +1,7 @@
+*~
+*.png
+java/ulamangling/ulamangling.jar
+java/ulamangling/bin/
+java/ulamangling/build/
+nohup.out
+*log
