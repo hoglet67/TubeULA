@@ -1,0 +1,6 @@
+<project default="jar" name="">
+	<property name="jar.name" value="ulamangling.jar"/>
+	<property name="jar.mainclass" value="com.hoglet.ulamangling.Process"/>
+    <import file="../ant/build.xml"/>
+</project>
+
