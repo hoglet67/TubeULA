@@ -1,0 +1,6 @@
+<project default="jar" name="">
+	<property name="jar.name" value="correctperspective.jar"/>
+	<property name="jar.mainclass" value="com.hoglet.correctperspective.CorrectPerspective"/>
+    <import file="../ant/build.xml"/>
+</project>
+

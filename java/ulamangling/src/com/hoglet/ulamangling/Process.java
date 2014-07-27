@@ -21,79 +21,74 @@ public class Process {
 
 	// Number of cells sampled as part of creating the correlation reference
 	public static final int NUM_SAMPLE_CELLS = 1;
-	
+
 	// Number of cells added added to the correlation reference
 	public static final int NUM_REF_CELLS = 4;
-	
+
 	// Nominal cell size in pixels
-	public static final int CELL_SIZE = 39;
-	
+	public static final int CELL_SIZE = 40;
+
 	// Exact cell width in pixels (best input estimate over the image)
-	public static final double X_INTERVAL = 13.82 * 72.0 / 25.4;
-	
+	public static final double X_INTERVAL = 40.0;
+
 	// Exact cell height in pixels (best input estimate over the image)
-	public static final double Y_INTERVAL = 13.89 * 72.0 / 25.4;
-	
+	public static final double Y_INTERVAL = 40.0;
+
 	// Threshold used when searching for the next grid line in pixels
 	public static final int SEARCH_THRESH = 5;
-	
-	// Threshold used when determining when determine connectivity to an adjacent cell
-	public static final int CONNECT_THRESH = 4;
 
-	// The X,Y coordinates of the top,left of the grid	
+	// Threshold used when determining when determine connectivity to an
+	// adjacent cell
+	public static final int CONNECT_THRESH = 20;
+
+	// Threshold used when determining when determine connectivity to an
+	// adjacent cell
+	public static final int BLANK_THRESH = 100;
+
+	// The X,Y coordinates of the top,left of the grid
 	public static Map<String, XY> startOffsets = new HashMap<String, XY>();
-		
-	// The X,Y coordinates of the top,left of the ULA cell grid	
+
+	// The X,Y coordinates of the top,left of the ULA cell grid
 	public static Map<String, XY> blockOffsets = new HashMap<String, XY>();
 
-	// The X,Y coordinates of the top,left of the cell to sample for the reference
+	// The X,Y coordinates of the top,left of the cell to sample for the
+	// reference
 	public static Map<String, XY> sampleOffsets = new HashMap<String, XY>();
 
+	// The X,Y coordinates of the bottom right of the grid
+	public static Map<String, XY> endOffsets = new HashMap<String, XY>();
+
+//	// Attempt 3
+//	// These values need to be manually extracted for each image
+//	static {
+//		startOffsets.put("00", new XY(1906, 1958));
+//		blockOffsets.put("00", new XY(2181, 2229));
+//		sampleOffsets.put("00", new XY(2181, 2229));
+//		endOffsets.put("00", new XY(8216, 8824));
+//	}
+
+	// Attempt 4
 	// These values need to be manually extracted for each image
 	static {
-		startOffsets.put("00_00", new XY(68, 41));
-		blockOffsets.put("00_00", new XY(384, 352));
-		sampleOffsets.put("00_00", new XY(384, 392));
+		startOffsets.put("00", new XY(0, 0)); // should be fixed
+		blockOffsets.put("00", new XY(327, 321)); // should be an integer number of cells
+		sampleOffsets.put("00", new XY(2368, 4004)); // hand picked
+		endOffsets.put("00", new XY(6519, 7119)); // should determined from the image
 	}
-			
-	public static Pin[] cellPins = new Pin[] {
-		new Pin(4, 1, PinType.NORMAL),
-		new Pin(6, 1, PinType.NORMAL),
-		new Pin(8, 1, PinType.NORMAL),
-		new Pin(12, 1, PinType.NORMAL),
-		new Pin(10, 3, PinType.NORMAL),
-		new Pin(12, 3, PinType.NORMAL),
-		new Pin(1, 4, PinType.NORMAL),
-		new Pin(4, 4, PinType.NORMAL),
-		new Pin(5, 4, PinType.NORMAL),
-		new Pin(7, 4, PinType.NORMAL),
-		new Pin(8, 4, PinType.NORMAL),
-		new Pin(1, 6, PinType.NORMAL),
-		new Pin(4, 7, PinType.NORMAL),
-		new Pin(7, 7, PinType.CS_EMITTER_L),
-		new Pin(8, 7, PinType.CS_EMITTER_R),
-		new Pin(12, 7, PinType.NORMAL),
-		new Pin(1, 8, PinType.NORMAL),
-		new Pin(4, 8, PinType.NORMAL),
-		new Pin(12, 8, PinType.NORMAL),
-		new Pin(7, 9, PinType.NORMAL),
-		new Pin(8, 9, PinType.CS_BASE),
-		new Pin(9, 9, PinType.NORMAL),
-		new Pin(12, 9, PinType.NORMAL),
-		new Pin(1, 10, PinType.NORMAL),
-		new Pin(4, 10, PinType.NORMAL),
-		new Pin(7, 10, PinType.CS_COLLECTOR),
-		new Pin(4, 11, PinType.NORMAL),
-		new Pin(7, 11, PinType.NORMAL),
-		new Pin(8, 11, PinType.NORMAL),
-		new Pin(9, 11, PinType.NORMAL),
-		new Pin(11, 12, PinType.NORMAL),
-		new Pin(4, 13, PinType.NORMAL),
-		new Pin(6, 13, PinType.NORMAL),
-		new Pin(8, 13, PinType.NORMAL),
-		new Pin(12, 13, PinType.NORMAL)
-	};
-	
+
+	public static Pin[] cellPins = new Pin[] { new Pin(4, 1, PinType.NORMAL), new Pin(6, 1, PinType.NORMAL),
+			new Pin(8, 1, PinType.NORMAL), new Pin(12, 1, PinType.NORMAL), new Pin(10, 3, PinType.NORMAL),
+			new Pin(12, 3, PinType.NORMAL), new Pin(1, 4, PinType.NORMAL), new Pin(4, 4, PinType.NORMAL),
+			new Pin(5, 4, PinType.NORMAL), new Pin(7, 4, PinType.NORMAL), new Pin(8, 4, PinType.NORMAL),
+			new Pin(1, 6, PinType.NORMAL), new Pin(4, 7, PinType.NORMAL), new Pin(7, 7, PinType.CS_EMITTER_L),
+			new Pin(8, 7, PinType.CS_EMITTER_R), new Pin(12, 7, PinType.NORMAL), new Pin(1, 8, PinType.NORMAL),
+			new Pin(4, 8, PinType.NORMAL), new Pin(12, 8, PinType.NORMAL), new Pin(7, 9, PinType.NORMAL),
+			new Pin(8, 9, PinType.CS_BASE), new Pin(9, 9, PinType.NORMAL), new Pin(12, 9, PinType.NORMAL),
+			new Pin(1, 10, PinType.NORMAL), new Pin(4, 10, PinType.NORMAL), new Pin(7, 10, PinType.CS_COLLECTOR),
+			new Pin(4, 11, PinType.NORMAL), new Pin(7, 11, PinType.NORMAL), new Pin(8, 11, PinType.NORMAL),
+			new Pin(9, 11, PinType.NORMAL), new Pin(11, 12, PinType.NORMAL), new Pin(4, 13, PinType.NORMAL),
+			new Pin(6, 13, PinType.NORMAL), new Pin(8, 13, PinType.NORMAL), new Pin(12, 13, PinType.NORMAL) };
+
 	int blockXOffset;
 	int blockYOffset;
 
@@ -160,6 +155,11 @@ public class Process {
 
 	public void convert(String name, File srcFile, File dstFile) throws IOException {
 
+		XY blockOffset = blockOffsets.get(name);
+		XY sampleOffset = sampleOffsets.get(name);
+		XY startOffset = startOffsets.get(name);
+		XY endOffset = endOffsets.get(name);
+
 		System.out.println("# Reading image " + srcFile);
 		BufferedImage image = ImageIO.read(srcFile);
 		int w = image.getWidth();
@@ -173,13 +173,9 @@ public class Process {
 
 		int[] xTotals = new int[w];
 		int[] yTotals = new int[h];
-		gridHistogram(pixels, xTotals, yTotals);
+		gridHistogram(pixels, startOffset, endOffset, xTotals, yTotals);
 
 		int gridSize = 10; // graph only
-		
-		XY blockOffset = blockOffsets.get(name);		
-		XY sampleOffset = sampleOffsets.get(name);		
-		XY startOffset = startOffsets.get(name);
 
 		double[] xReference = createRef(xTotals, CELL_SIZE, sampleOffset.getX(), X_INTERVAL, NUM_SAMPLE_CELLS, NUM_REF_CELLS);
 		double[] yReference = createRef(yTotals, CELL_SIZE, sampleOffset.getY(), Y_INTERVAL, NUM_SAMPLE_CELLS, NUM_REF_CELLS);
@@ -193,21 +189,20 @@ public class Process {
 		double[] xCorrelation = Stats.bruteForceCorrelation(xNormalized, xReference);
 		double[] yCorrelation = Stats.bruteForceCorrelation(yNormalized, yReference);
 
-		List<Integer> xGrid = makeGrid(w, startOffset.getX(), CELL_SIZE, xCorrelation, SEARCH_THRESH);
-		List<Integer> yGrid = makeGrid(h, startOffset.getY(), CELL_SIZE, yCorrelation, SEARCH_THRESH);
-		
-//		dumpXGraph("x reference", xReference);
-//		dumpXGraph("x normalized", xNormalized);
-//		dumpXGraph("x correlation", xCorrelation);
-//		dumpXGraph("x grid", xGrid, w, gridSize);
-		
+		List<Integer> xGrid = makeGrid(startOffset.getX(), endOffset.getX(), CELL_SIZE, xCorrelation, SEARCH_THRESH);
+		List<Integer> yGrid = makeGrid(startOffset.getY(), endOffset.getY(), CELL_SIZE, yCorrelation, SEARCH_THRESH);
+
+		// dumpXGraph("x reference", xReference);
+		// dumpXGraph("x normalized", xNormalized);
+		// dumpXGraph("x correlation", xCorrelation);
+		// dumpXGraph("x grid", xGrid, w, gridSize);
+		// dumpXGraph("y reference", yReference);
+		// dumpXGraph("y normalized", yNormalized);
+		// dumpXGraph("y correlation", yCorrelation);
+		// dumpXGraph("y grid", yGrid, h, gridSize);
+
 		int blockXOffset = getBlockOffset(xGrid, blockOffset.getX(), SEARCH_THRESH);
 		int blockYOffset = getBlockOffset(yGrid, blockOffset.getY(), SEARCH_THRESH);
-
-		 dumpXGraph("y reference", yReference);
-		 dumpXGraph("y normalized", yNormalized);
-		 dumpXGraph("y correlation", yCorrelation);
-		 dumpXGraph("y grid", yGrid, h, gridSize);
 
 		System.out.println("# Annotating PNG");
 		// Overlay grid on image
@@ -223,52 +218,99 @@ public class Process {
 			}
 		}
 
-		
+		int bucket[] = new int[400];
+
 		for (int xi = 0; xi < xGrid.size() - 1; xi++) {
 			for (int yi = 0; yi < yGrid.size() - 1; yi++) {
 
 				int x1 = xGrid.get(xi);
 				int y1 = yGrid.get(yi);
-				int x2 = xGrid.get(xi + 1) - 1;
-				int y2 = yGrid.get(yi + 1) - 1;
+				int x2 = xGrid.get(xi + 1);
+				int y2 = yGrid.get(yi + 1);
 
 				int top = 0;
 				int left = 0;
 				int right = 0;
 				int bottom = 0;
 
-				for (int i = 0; i < CELL_SIZE; i++) {
-					if ((pixels[y1][x1 + i] & 0xff0000) < 128) {
-						top++;
-					}
-					if ((pixels[y2][x1 + i] & 0xff0000) < 128) {
-						bottom++;
-					}
-					if ((pixels[y1 + i][x1] & 0xff0000) < 128) {
-						left++;
-					}
-					if ((pixels[y1 + i][x2] & 0xff0000) < 128) {
-						right++;
+				int total = 0;
+				for (int x = x1; x <= x2; x++) {
+					for (int y = y1; y <= y2; y++) {
+						if ((pixels[y][x] & 0xff0000) < 128) {
+							total++;
+						}
 					}
 				}
 
-				int rgb = Pin.YELLOW;
+				if (total < BLANK_THRESH) {
+					continue;
+				}
+
+//				// This doesn't work well with overlapping lines on a corner
+//				int[] lines = new int[] { 0, 1, 2, 3, 4, 5, 6, 7 };
+//				for (int line : lines) {
+//					int v = line >= 4 ? 1 : -1;
+//					for (int x = x1 + 4; x <= x2 - 4; x++) {
+//						if ((pixels[y1 + line][x] & 0xff0000) < 128) {
+//							top += v;
+//						}
+//						if ((pixels[y2 - line][x] & 0xff0000) < 128) {
+//							bottom += v;
+//						}
+//					}
+//					for (int y = y1 + 4; y <= y2 - 4; y++) {
+//						if ((pixels[y][x1 + line] & 0xff0000) < 128) {
+//							left += v;
+//						}
+//						if ((pixels[y][x2 - line] & 0xff0000) < 128) {
+//							right += v;
+//						}
+//					}
+//				}
+
+				for (int line = -1; line <= 1; line++) {
+					for (int x = x1; x <= x2; x++) {
+						if ((pixels[y1 + line][x] & 0xff0000) < 128) {
+							top++;
+						}
+						if ((pixels[y2 - line][x] & 0xff0000) < 128) {
+							bottom++;
+						}
+					}
+					for (int y = y1; y <= y2; y++) {
+						if ((pixels[y][x1 + line] & 0xff0000) < 128) {
+							left++;
+						}
+						if ((pixels[y][x2 - line] & 0xff0000) < 128) {
+							right++;
+						}
+					}
+				}
+
+				bucket[top]++;
+				bucket[bottom]++;
+				bucket[left]++;
+				bucket[right]++;
+
+				int rgb = Pin.RED;
 				int z = 8;
 
 				if (top > CONNECT_THRESH) {
-					Pin.rectangle(image, x1 + (CELL_SIZE - z) / 2, y1, z, (CELL_SIZE + z) / 2, rgb);
+					Pin.rectangle(image, x1 + (CELL_SIZE - z) / 2 + 1, y1 + 1, z, (CELL_SIZE + z) / 2, rgb, true);
 				}
 				if (bottom > CONNECT_THRESH) {
-					Pin.rectangle(image, x1 + (CELL_SIZE - z) / 2, y2 - (CELL_SIZE + z) / 2, z, (CELL_SIZE + z) / 2, rgb);
+					Pin.rectangle(image, x1 + (CELL_SIZE - z) / 2 + 1, y2 - (CELL_SIZE + z) / 2 + 1, z, (CELL_SIZE + z) / 2, rgb, true);
 				}
 				if (left > CONNECT_THRESH) {
-					Pin.rectangle(image, x1, y1 + (CELL_SIZE - z) / 2, (CELL_SIZE + z) / 2, z, rgb);
+					Pin.rectangle(image, x1 + 1, y1 + (CELL_SIZE - z) / 2 + 1, (CELL_SIZE + z) / 2, z, rgb, true);
 				}
 				if (right > CONNECT_THRESH) {
-					Pin.rectangle(image, x2 - (CELL_SIZE + z) / 2, y1 + (CELL_SIZE - z) / 2, (CELL_SIZE + z) / 2, z, rgb);
+					Pin.rectangle(image, x2 - (CELL_SIZE + z) / 2 + 1, y1 + (CELL_SIZE - z) / 2 + 1, (CELL_SIZE + z) / 2, z, rgb, true);
 				}
 			}
 		}
+
+		dumpXGraph("buckets", bucket);
 
 		// Overlay pins
 		addPins(image, blockXOffset, blockYOffset, xGrid, yGrid);
@@ -277,7 +319,7 @@ public class Process {
 		ImageIO.write(image, "png", dstFile);
 
 	}
-	
+
 	private int getBlockOffset(List<Integer> grid, int val, int within) {
 		int offset = 0;
 		for (int x : grid) {
@@ -299,11 +341,11 @@ public class Process {
 					pin.plot(image, xGrid, yGrid, cellX, cellY, CELL_SIZE, Pin.GREEN);
 				}
 			}
-		}		
+		}
 	}
 
-
 	private double[] createRef(int[] totals, int cellSize, int offset, double interval, int numSampleCells, int numRefCells) {
+		System.out.println(interval);
 		double[] sample = new double[cellSize];
 		Arrays.fill(sample, 0);
 		for (int i = 0; i < numSampleCells; i++) {
@@ -311,7 +353,8 @@ public class Process {
 				sample[j] += totals[offset + (int) (interval * i + 0.5) + j];
 			}
 		}
-		double[] reference = new double[(int) (interval * numRefCells + 0.5)];
+		double[] reference = new double[(int) ((interval - 1) * numRefCells + 0.5) + cellSize];
+		System.out.println(reference.length);
 		Arrays.fill(reference, 0);
 		for (int i = 0; i < numRefCells; i++) {
 			for (int j = 0; j < cellSize; j++) {
@@ -321,10 +364,11 @@ public class Process {
 		return reference;
 	}
 
-	private List<Integer> makeGrid(int n, int offset, int cellsize, double[] correlation, int search) {
+	private List<Integer> makeGrid(int startOffset, int endOffset, int cellsize, double[] correlation, int search) {
+		int n = correlation.length;
 		List<Integer> grid = new ArrayList<Integer>();
-		int i = offset;
-		while (i < n) {
+		int i = startOffset;
+		while (i <= endOffset) {
 			double best = Double.MIN_VALUE;
 			int bestj = 0;
 			for (int j = -search; j <= search; j++) {
@@ -366,13 +410,11 @@ public class Process {
 		System.out.println("\n");
 	}
 
-	private void gridHistogram(int[][] pixels, int[] xTotals, int[] yTotals) {
+	private void gridHistogram(int[][] pixels, XY startOffset, XY endOffset, int[] xTotals, int[] yTotals) {
 		Arrays.fill(xTotals, 0);
 		Arrays.fill(yTotals, 0);
-		int h = yTotals.length;
-		int w = xTotals.length;
-		for (int y = 0; y < h; y++) {
-			for (int x = 0; x < w; x++) {
+		for (int y = startOffset.getY(); y < endOffset.getY(); y++) {
+			for (int x = startOffset.getX(); x < endOffset.getX(); x++) {
 				int rgb = pixels[y][x];
 				// metalization is 0xff0000ff
 				// background is 0xffffffff
@@ -428,7 +470,7 @@ public class Process {
 			File dstFile = new File(args[1]);
 
 			Process c = new Process();
-			
+
 			String name = srcFile.getName();
 			name = name.substring(name.indexOf('_') + 1, name.lastIndexOf('.'));
 			System.out.println("# name = " + name);

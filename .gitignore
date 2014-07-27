@@ -1,7 +1,12 @@
 *~
+*.ppm
+*.pnm
 *.png
 java/ulamangling/ulamangling.jar
 java/ulamangling/bin/
 java/ulamangling/build/
+java/correctperspective/correctperspective.jar
+java/correctperspective/bin/
+java/correctperspective/build/
 nohup.out
 *log

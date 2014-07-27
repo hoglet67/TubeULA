@@ -31,8 +31,8 @@ public class Pin extends XY {
 	
 	public void plot(BufferedImage image, List<Integer> xGrid, List<Integer> yGrid, int cellX, int cellY, int cellsize, int rgb) {
 		
-		int px = xGrid.get(cellX + getX());
-		int py = yGrid.get(cellY + getY());
+		int px = xGrid.get(cellX + getX()) + 1;
+		int py = yGrid.get(cellY + getY()) + 1;
 		
 		switch (type) {
 		case NORMAL:
@@ -53,13 +53,17 @@ public class Pin extends XY {
 			
 		}		
 	}
-	
 
 	public static void rectangle(BufferedImage image, int x, int y, int w, int h, int rgb) {
+		rectangle(image, x, y, w, h, rgb, false);
+	}
+
+	public static void rectangle(BufferedImage image, int x, int y, int w, int h, int rgb, boolean and) {
 		for (int xi = x; xi < x + w; xi++) {
 			for (int yi = y; yi < y + h; yi++) {
 				try {
-					image.setRGB(xi, yi, rgb);
+					int val = and ? (image.getRGB(xi, yi) & rgb) : rgb;
+					image.setRGB(xi, yi, val);
 				} catch (Throwable e) {
 					System.out.println(" x = " + xi + "; y = " + yi);
 					throw new RuntimeException(e);
