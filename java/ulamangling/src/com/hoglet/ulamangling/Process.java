@@ -35,11 +35,11 @@ public class Process {
 	public static final double Y_INTERVAL = 40.0;
 
 	// Threshold used when searching for the next grid line in pixels
-	public static final int SEARCH_THRESH = 5;
+	public static final int SEARCH_THRESH = 3;
 
 	// Threshold used when determining when determine connectivity to an
 	// adjacent cell
-	public static final int CONNECT_THRESH = 20;
+	public static final int CONNECT_THRESH = 16;
 
 	// Threshold used when determining when determine connectivity to an
 	// adjacent cell
@@ -71,7 +71,7 @@ public class Process {
 	// These values need to be manually extracted for each image
 	static {
 		startOffsets.put("00", new XY(0, 0)); // should be fixed
-		blockOffsets.put("00", new XY(327, 321)); // should be an integer number of cells
+		blockOffsets.put("00", new XY(327, 321)); // TODO: Turn this into a cell offset (8,8)
 		sampleOffsets.put("00", new XY(2368, 4004)); // hand picked
 		endOffsets.put("00", new XY(6519, 7119)); // should determined from the image
 	}
@@ -153,23 +153,24 @@ public class Process {
 		return result;
 	}
 
-	public void convert(String name, File srcFile, File dstFile) throws IOException {
+	public void convert(String name, File gridFile, File matchFile, File dstFile) throws IOException {
 
+		CellMatcher matcher = new CellMatcher(CELL_SIZE + 1, 4, 4);
 		XY blockOffset = blockOffsets.get(name);
 		XY sampleOffset = sampleOffsets.get(name);
 		XY startOffset = startOffsets.get(name);
 		XY endOffset = endOffsets.get(name);
 
-		System.out.println("# Reading image " + srcFile);
-		BufferedImage image = ImageIO.read(srcFile);
+		System.out.println("# Reading image " + gridFile);
+		BufferedImage image = ImageIO.read(gridFile);
 		int w = image.getWidth();
 		int h = image.getHeight();
-		System.out.println("# Image has " + w + " x " + h + " pixels; total = " + w * h);
+		System.out.println("# Grid Image has " + w + " x " + h + " pixels; total = " + w * h);
 
 		System.out.println("# Converting image");
 		int[][] pixels = convertTo2DWithoutUsingGetRGB(image);
 
-		System.out.println("# Processing image");
+		System.out.println("# Gridding image");
 
 		int[] xTotals = new int[w];
 		int[] yTotals = new int[h];
@@ -177,20 +178,38 @@ public class Process {
 
 		int gridSize = 10; // graph only
 
-		double[] xReference = createRef(xTotals, CELL_SIZE, sampleOffset.getX(), X_INTERVAL, NUM_SAMPLE_CELLS, NUM_REF_CELLS);
-		double[] yReference = createRef(yTotals, CELL_SIZE, sampleOffset.getY(), Y_INTERVAL, NUM_SAMPLE_CELLS, NUM_REF_CELLS);
+//		double[] xReference = createRef(xTotals, CELL_SIZE, sampleOffset.getX(), X_INTERVAL, NUM_SAMPLE_CELLS, NUM_REF_CELLS);
+//		double[] yReference = createRef(yTotals, CELL_SIZE, sampleOffset.getY(), Y_INTERVAL, NUM_SAMPLE_CELLS, NUM_REF_CELLS);
 
+		double[] window = new double[] {
+				1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1
+		};
+		double[] xReference = window;
+		double[] yReference = window;
+		
 		xReference = new Stats(xReference).normalize();
 		yReference = new Stats(yReference).normalize();
 
 		double[] xNormalized = new Stats(xTotals).normalize();
 		double[] yNormalized = new Stats(yTotals).normalize();
 
-		double[] xCorrelation = Stats.bruteForceCorrelation(xNormalized, xReference);
-		double[] yCorrelation = Stats.bruteForceCorrelation(yNormalized, yReference);
+		double[] xCorrelation = Stats.bruteForceCorrelationCentered(xNormalized, xReference);
+		double[] yCorrelation = Stats.bruteForceCorrelationCentered(yNormalized, yReference);
 
 		List<Integer> xGrid = makeGrid(startOffset.getX(), endOffset.getX(), CELL_SIZE, xCorrelation, SEARCH_THRESH);
 		List<Integer> yGrid = makeGrid(startOffset.getY(), endOffset.getY(), CELL_SIZE, yCorrelation, SEARCH_THRESH);
+		
+		System.out.println("# Reading image " + matchFile);
+		image = ImageIO.read(matchFile);
+		w = image.getWidth();
+		h = image.getHeight();
+		System.out.println("# Match Image has " + w + " x " + h + " pixels; total = " + w * h);
+
+		System.out.println("# Converting image");
+		pixels = convertTo2DWithoutUsingGetRGB(image);
+
+		System.out.println("# Matching image");
+		
 
 		// dumpXGraph("x reference", xReference);
 		// dumpXGraph("x normalized", xNormalized);
@@ -200,6 +219,9 @@ public class Process {
 		// dumpXGraph("y normalized", yNormalized);
 		// dumpXGraph("y correlation", yCorrelation);
 		// dumpXGraph("y grid", yGrid, h, gridSize);
+		
+		
+		
 
 		int blockXOffset = getBlockOffset(xGrid, blockOffset.getX(), SEARCH_THRESH);
 		int blockYOffset = getBlockOffset(yGrid, blockOffset.getY(), SEARCH_THRESH);
@@ -220,31 +242,53 @@ public class Process {
 
 		int bucket[] = new int[400];
 
+		int minW = Integer.MAX_VALUE;
+		int minH = Integer.MAX_VALUE;
+		int maxW = Integer.MIN_VALUE;
+		int maxH = Integer.MIN_VALUE;
 		for (int xi = 0; xi < xGrid.size() - 1; xi++) {
+			
+			System.out.println(xi + " / " + xGrid.size());
 			for (int yi = 0; yi < yGrid.size() - 1; yi++) {
 
 				int x1 = xGrid.get(xi);
 				int y1 = yGrid.get(yi);
 				int x2 = xGrid.get(xi + 1);
 				int y2 = yGrid.get(yi + 1);
-
-				int top = 0;
-				int left = 0;
-				int right = 0;
-				int bottom = 0;
-
-				int total = 0;
-				for (int x = x1; x <= x2; x++) {
-					for (int y = y1; y <= y2; y++) {
-						if ((pixels[y][x] & 0xff0000) < 128) {
-							total++;
-						}
-					}
+				
+				if ((x2 - x1) < minW) {
+					minW = x2 - x1;
 				}
-
-				if (total < BLANK_THRESH) {
-					continue;
+				if ((x2 - x1) > maxW) {
+					maxW = x2 - x1;
 				}
+				if ((y2 - y1) < minH) {
+					minH = y2 - y1;
+				}
+				if ((y2 - y1) > maxH) {
+					maxH = y2 - y1;
+				}
+				bucket[x2 - x1]++;
+				bucket[y2 - y1]++;
+				
+
+//				int top = 0;
+//				int left = 0;
+//				int right = 0;
+//				int bottom = 0;
+//
+//				int total = 0;
+//				for (int x = x1; x <= x2; x++) {
+//					for (int y = y1; y <= y2; y++) {
+//						if ((pixels[y][x] & 0xff0000) < 128) {
+//							total++;
+//						}
+//					}
+//				}
+//
+//				if (total < BLANK_THRESH) {
+//					continue;
+//				}
 
 //				// This doesn't work well with overlapping lines on a corner
 //				int[] lines = new int[] { 0, 1, 2, 3, 4, 5, 6, 7 };
@@ -268,48 +312,58 @@ public class Process {
 //					}
 //				}
 
-				for (int line = -1; line <= 1; line++) {
-					for (int x = x1; x <= x2; x++) {
-						if ((pixels[y1 + line][x] & 0xff0000) < 128) {
-							top++;
-						}
-						if ((pixels[y2 - line][x] & 0xff0000) < 128) {
-							bottom++;
-						}
-					}
-					for (int y = y1; y <= y2; y++) {
-						if ((pixels[y][x1 + line] & 0xff0000) < 128) {
-							left++;
-						}
-						if ((pixels[y][x2 - line] & 0xff0000) < 128) {
-							right++;
-						}
-					}
-				}
-
-				bucket[top]++;
-				bucket[bottom]++;
-				bucket[left]++;
-				bucket[right]++;
-
-				int rgb = Pin.RED;
-				int z = 8;
-
-				if (top > CONNECT_THRESH) {
-					Pin.rectangle(image, x1 + (CELL_SIZE - z) / 2 + 1, y1 + 1, z, (CELL_SIZE + z) / 2, rgb, true);
-				}
-				if (bottom > CONNECT_THRESH) {
-					Pin.rectangle(image, x1 + (CELL_SIZE - z) / 2 + 1, y2 - (CELL_SIZE + z) / 2 + 1, z, (CELL_SIZE + z) / 2, rgb, true);
-				}
-				if (left > CONNECT_THRESH) {
-					Pin.rectangle(image, x1 + 1, y1 + (CELL_SIZE - z) / 2 + 1, (CELL_SIZE + z) / 2, z, rgb, true);
-				}
-				if (right > CONNECT_THRESH) {
-					Pin.rectangle(image, x2 - (CELL_SIZE + z) / 2 + 1, y1 + (CELL_SIZE - z) / 2 + 1, (CELL_SIZE + z) / 2, z, rgb, true);
-				}
+				
+				// 
+//				for (int line = -1; line <= 1; line++) {
+//					for (int x = x1; x <= x2; x++) {
+//						if ((pixels[y1 + line][x] & 0xff0000) < 128) {
+//							top++;
+//						}
+//						if ((pixels[y2 - line][x] & 0xff0000) < 128) {
+//							bottom++;
+//						}
+//					}
+//					for (int y = y1; y <= y2; y++) {
+//						if ((pixels[y][x1 + line] & 0xff0000) < 128) {
+//							left++;
+//						}
+//						if ((pixels[y][x2 - line] & 0xff0000) < 128) {
+//							right++;
+//						}
+//					}
+//				}
+//
+//				bucket[top]++;
+//				bucket[bottom]++;
+//				bucket[left]++;
+//				bucket[right]++;
+//
+//				int rgb = Pin.RED;
+//				int z = 8;
+//
+//				if (top > CONNECT_THRESH) {
+//					Pin.rectangle(image, x1 + (CELL_SIZE - z) / 2 + 1, y1 + 1, z, (CELL_SIZE + z) / 2, rgb, true);
+//				}
+//				if (bottom > CONNECT_THRESH) {
+//					Pin.rectangle(image, x1 + (CELL_SIZE - z) / 2 + 1, y2 - (CELL_SIZE + z) / 2 + 1, z, (CELL_SIZE + z) / 2, rgb, true);
+//				}
+//				if (left > CONNECT_THRESH) {
+//					Pin.rectangle(image, x1 + 1, y1 + (CELL_SIZE - z) / 2 + 1, (CELL_SIZE + z) / 2, z, rgb, true);
+//				}
+//				if (right > CONNECT_THRESH) {
+//					Pin.rectangle(image, x2 - (CELL_SIZE + z) / 2 + 1, y1 + (CELL_SIZE - z) / 2 + 1, (CELL_SIZE + z) / 2, z, rgb, true);
+//				}
+				
+				matcher.match(pixels, x1, y1, x2, y2, image, (x1 == 4125) && (y1 == 3604));
+				
 			}
 		}
 
+		System.out.println("# MinW = " + minW);
+		System.out.println("# MaxW = " + maxW);
+		System.out.println("# MinH = " + minH);
+		System.out.println("# MaxH = " + maxH);
+		
 		dumpXGraph("buckets", bucket);
 
 		// Overlay pins
@@ -453,29 +507,38 @@ public class Process {
 
 	public static final void main(String[] args) {
 		try {
-			if (args.length != 2) {
-				System.err.println("usage: java -jar ulamangling.jar <Source PNG> <Dst PNG> ");
+			if (args.length != 3) {
+				System.err.println("usage: java -jar ulamangling.jar <Grid PNG> <Match PNG> <Dst PNG> ");
 				System.exit(1);
 			}
-			File srcFile = new File(args[0]);
-			if (!srcFile.exists()) {
-				System.err.println("Source File: " + srcFile + " does not exist");
+			File gridFile = new File(args[0]);
+			if (!gridFile.exists()) {
+				System.err.println("Grid File: " + gridFile + " does not exist");
 				System.exit(1);
 			}
-			if (!srcFile.isFile()) {
-				System.err.println("Source File: " + srcFile + " is not a file");
+			if (!gridFile.isFile()) {
+				System.err.println("Grid File: " + gridFile + " is not a file");
+				System.exit(1);
+			}
+			File matchFile = new File(args[1]);
+			if (!matchFile.exists()) {
+				System.err.println("Match File: " + matchFile + " does not exist");
+				System.exit(1);
+			}
+			if (!matchFile.isFile()) {
+				System.err.println("Match File: " + matchFile + " is not a file");
 				System.exit(1);
 			}
 
-			File dstFile = new File(args[1]);
+			File dstFile = new File(args[2]);
 
 			Process c = new Process();
 
-			String name = srcFile.getName();
+			String name = gridFile.getName();
 			name = name.substring(name.indexOf('_') + 1, name.lastIndexOf('.'));
 			System.out.println("# name = " + name);
 
-			c.convert(name, srcFile, dstFile);
+			c.convert(name, gridFile, matchFile, dstFile);
 
 		} catch (IOException e) {
 			e.printStackTrace();

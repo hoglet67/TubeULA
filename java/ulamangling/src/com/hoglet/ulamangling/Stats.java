@@ -69,4 +69,21 @@ public class Stats {
         }
         return ac;
     }
+    
+    public static double[] bruteForceCorrelationCentered(double [] x, double[] y) {
+		double ac[] = new double[x.length];
+        Arrays.fill(ac, 0);
+        int n = x.length;
+        int m = y.length;
+        int offset = m / 2; // m odd (e.g. 9, so 4 would be the center)
+        for (int j = 0; j < n; j++) {
+            for (int i = 0; i < m; i++) {
+            	int xi = i + j - offset;
+            	if (xi >= 0 && xi < n) {
+            		ac[j] += x[xi] * y[i];
+            	}
+            }
+        }
+        return ac;
+    }
 }
