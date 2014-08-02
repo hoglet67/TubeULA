@@ -15,11 +15,23 @@ public class Pin extends XY {
 	public static final int WHITE   = 0xffffffff;
 	
 	public enum PinType {
+		NONE,
 		NORMAL,
-		CS_EMITTER_L,
-		CS_EMITTER_R,
-		CS_BASE,
-		CS_COLLECTOR
+		CS_EMITTER_1,
+		CS_EMITTER_2,
+		CS_EMITTER_3,
+		CS_EMITTER_4,
+		CS_EMITTER_5,
+		CS_EMITTER_6,
+		CS_BASE_1,
+		CS_BASE_2,
+		CS_BASE_3,
+		CS_COLLECTOR_1,
+		CS_COLLECTOR_2,
+		CS_COLLECTOR_3,
+		CS_GND_1,
+		CS_GND_2,
+		CS_GND_3
 	};
 
 	private PinType type;
@@ -29,26 +41,63 @@ public class Pin extends XY {
 		this.type = type;
 	}
 	
-	public void plot(BufferedImage image, List<Integer> xGrid, List<Integer> yGrid, int cellX, int cellY, int cellsize, int rgb) {
+	public PinType getType() {
+		return type;
+	}
+	
+	public void plot(BufferedImage image, List<Integer> xGrid, List<Integer> yGrid, int cellX, int cellY, int w, int h, int rgb) {
 		
-		int px = xGrid.get(cellX + getX()) + 1;
-		int py = yGrid.get(cellY + getY()) + 1;
+		int px = xGrid.get(cellX) + 1;
+		int py = yGrid.get(cellY) + 1;
 		
 		switch (type) {
+		case NONE:
+			break;
 		case NORMAL:
-			rectangle(image, px + cellsize / 4, py + cellsize / 4, cellsize / 2, cellsize / 2, rgb);
+		case CS_BASE_1:
+		case CS_BASE_3:
+			rectangle(image, px + w / 4, py + h / 4, w / 2, h / 2, rgb);
 			break;
-		case CS_EMITTER_L:
-			rectangle(image, px + cellsize / 4, py + cellsize / 2, cellsize, cellsize, rgb);
+		case CS_EMITTER_1:
+			rectangle(image, px + w / 4, py + h / 2, w * 3 / 4, h / 2, rgb);
 			break;
-		case CS_EMITTER_R:
-			rectangle(image, px + cellsize * 3 / 4, py + cellsize / 2, cellsize, cellsize, rgb);
+		case CS_EMITTER_2:
+			rectangle(image, px, py + h / 2, w / 4, h / 2, rgb);
+			rectangle(image, px + w * 3 / 4, py + h / 2, w / 4, h / 2, rgb);
 			break;
-		case CS_BASE:
-			rectangle(image, px , py + cellsize / 4, cellsize, cellsize / 2, rgb);
+		case CS_EMITTER_3:
+			rectangle(image, px, py + h / 2, w * 3 / 4, h / 2, rgb);
 			break;
-		case CS_COLLECTOR:
-			rectangle(image, px + cellsize / 4 , py + cellsize / 4, cellsize * 5 / 2, cellsize / 2, rgb);
+		case CS_EMITTER_4:
+			rectangle(image, px + w / 4, py, w * 3 / 4, h * 3 / 4, rgb);
+			break;
+		case CS_EMITTER_5:
+			rectangle(image, px, py, w / 4, h * 3 / 4, rgb);
+			rectangle(image, px + w * 3 / 4, py, w / 4, h * 3 / 4, rgb);
+			break;
+		case CS_EMITTER_6:
+			rectangle(image, px, py, w * 3 / 4, h * 3 / 4, rgb);
+			break;
+		case CS_BASE_2:
+			rectangle(image, px , py + h / 4, w, h / 2, rgb);
+			break;
+		case CS_COLLECTOR_1:
+			rectangle(image, px + w / 4 , py + h / 4, w * 4 / 4, h / 2, rgb);
+			break;
+		case CS_COLLECTOR_2:
+			rectangle(image, px , py + h / 4, w, h / 2, rgb);
+			break;
+		case CS_COLLECTOR_3:
+			rectangle(image, px , py + h / 4, w * 3 / 4, h / 2, rgb);
+			break;
+		case CS_GND_1:
+			rectangle(image, px + w / 4 , py, w * 3 / 4, h * 3 / 4, rgb);
+			break;
+		case CS_GND_2:
+			rectangle(image, px, py, w, h * 3 / 4, rgb);
+			break;
+		case CS_GND_3:
+			rectangle(image, px , py, w * 3 / 4, h * 3 / 4, rgb);
 			break;
 			
 		}		

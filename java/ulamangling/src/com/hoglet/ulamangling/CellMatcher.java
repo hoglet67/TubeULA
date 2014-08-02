@@ -4,6 +4,8 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.hoglet.ulamangling.Pin.PinType;
+
 public class CellMatcher {
 
 	private int d;
@@ -11,6 +13,7 @@ public class CellMatcher {
 	private int l;
 
 	private List<Pattern> patterns = new ArrayList<Pattern>();
+	private List<Pattern> patternsPlusPins = new ArrayList<Pattern>();
 
 	public enum Region {
 		INIT, ZERO, HALF, ONE,
@@ -21,12 +24,12 @@ public class CellMatcher {
 		this.l = line;
 		this.c = corner;
 		initializePatterns();
-		dumpPatterns();
+		dumpPatterns(patterns);
+		dumpPatterns(patternsPlusPins);
 	}
 
 	private void initializePatterns() {
-		Region[][] cell0a = getCell0a();
-		Region[][] cell0b = getCell0b();
+		Region[][] cell0 = getCell0();
 
 		Region[][] cell1_0 = getCell1();
 		Region[][] cell1_90 = rotateCell(cell1_0);
@@ -58,8 +61,7 @@ public class CellMatcher {
 
 		Region[][] cell4 = getCell4();
 
-		patterns.add(new Pattern(cell0a, 0));
-		patterns.add(new Pattern(cell0b, 0));
+		patterns.add(new Pattern(cell0, 0));
 
 		patterns.add(new Pattern(cell1_0, 1));
 		patterns.add(new Pattern(cell1_90, 2));
@@ -90,9 +92,18 @@ public class CellMatcher {
 		patterns.add(new Pattern(cell3b_270, 11));
 		
 		patterns.add(new Pattern(cell4, 15));
+		
+		// Deep copy as we are about to change the pattern
+		patternsPlusPins = new ArrayList<Pattern>();
+		for (Pattern p : patterns) {
+			Pattern pPlusPins = new Pattern(p);
+			// TODO: More accurately draw the expected pin in the pattern
+			rectangle(pPlusPins.getPattern(), d / 4, d / 4, d - d / 2, d - d / 2, Region.ONE);
+			patternsPlusPins.add(pPlusPins);
+		}
 	}
 
-	public void dumpPatterns() {
+	public void dumpPatterns(List<Pattern> patterns) {
 		for (Pattern pattern : patterns) {
 			for (int y = 0; y < d; y++) {
 				for (int x = 0; x < d; x++) {
@@ -117,27 +128,21 @@ public class CellMatcher {
 		}
 	}
 
-	private Region[][] getCell0a() {
+	private Region[][] getCell0() {
 		Region[][] cell = new Region[d][d];
 		rectangle(cell, 0, 0, d, d, Region.ZERO);
 		return cell;
 	}
-
-	private Region[][] getCell0b() {
-		Region[][] cell = getCell0a();
-		rectangle(cell, d / 4, d / 4, d - d / 2, d - d / 2, Region.ONE);
-		return cell;
-	}
 	
 	private Region[][] getCell1() {
-		Region[][] cell = getCell0a();
+		Region[][] cell = getCell0();
 		rectangle(cell, c, 0, d - c - c, d - c, Region.ONE);
 		rectangle(cell, c + l, 0, d - c - c - l - l, d - c - l, Region.HALF);
 		return cell;
 	}
 
 	private Region[][] getCell2a() {
-		Region[][] cell = getCell0a();
+		Region[][] cell = getCell0();
 		rectangle(cell, c, 0, d - c, d - c, Region.ONE);
 		rectangle(cell, c + l, 0, d - c - l, d - c - l, Region.HALF);
 		rectangle(cell, d - c - l, 0, c + l, c + l, Region.ONE);
@@ -146,7 +151,7 @@ public class CellMatcher {
 	}
 
 	private Region[][] getCell2b() {
-		Region[][] cell = getCell0a();
+		Region[][] cell = getCell0();
 		rectangle(cell, c, 0, d - c - c, d, Region.ONE);
 		rectangle(cell, c + l, 0, d - c - c - l - l, d, Region.HALF);
 		return cell;
@@ -160,7 +165,7 @@ public class CellMatcher {
 	}
 
 	private Region[][] getCell3a() {
-		Region[][] cell = getCell0a();
+		Region[][] cell = getCell0();
 		rectangle(cell, c, 0, d - c, d, Region.ONE);
 		rectangle(cell, c + l, 0, d - c - l, d, Region.HALF);
 		rectangle(cell, d - c - l, 0, c + l, c + l, Region.ONE);
@@ -213,17 +218,39 @@ public class CellMatcher {
 		}
 	}
 
-	public int match(int[][] pixels, int x1, int y1, int x2, int y2, BufferedImage image, boolean log) {
+	public void match(int[][] pixels, int xi, int yi, List<Integer> xGrid, List<Integer> yGrid, BufferedImage image, Cell[][] cells) {
 
+		if (cells[yi][xi].getType() == PinType.CS_EMITTER_2 || cells[yi][xi].getType() == PinType.CS_EMITTER_5) {
+			return;
+		}
+		
+		
+		
+		int h = pixels.length;
+		int w = pixels[0].length;
+		
+		int x1 = xGrid.get(xi);
+		int x2 = xGrid.get(xi + 1);
+		int y1 = yGrid.get(yi);
+		int y2 = yGrid.get(yi + 1);
+		
+		boolean log = false;
+		
 		Pattern bestPattern = null;
 		int bestMad = Integer.MAX_VALUE;
 
 		int bdx = 0;
 		int bdy = 0;
-		
-		for (Pattern pattern : patterns) {
 
-			int delta = 3;
+		// If we know there is a pin in this cell, the use set of patterns that include pins
+		// Note: We could be smarter here, because not all pins in the plot were blue
+		boolean pinPresent = cells[yi][xi].getType() != PinType.NONE;
+		
+		List<Pattern> matchAgainst = pinPresent ?  patternsPlusPins : patterns;
+		
+		for (Pattern pattern : matchAgainst) {
+
+			int delta = 2;
 			int dxMin = -delta;
 			int dxMax = delta;
 			int dyMin = -delta;
@@ -242,7 +269,7 @@ public class CellMatcher {
 				dyMax = image.getHeight() - y2 - 1;
 			}
 
-			
+
 			for (int dy = dyMin; dy <= dyMax; dy++) {
 				for (int dx = dxMin; dx <= dxMax; dx++) {
 					
@@ -253,35 +280,35 @@ public class CellMatcher {
 					int totalHalf = 0;
 					int totalOne = 0;
 
-					for (int y = 0; y < d; y++) {
-						for (int x = 0; x < d; x++) {
-							// white = 0xffffff
-							// blue = 0xff0000
-							// black = 0x000000
-							int pixel = (pixels[y1 + dy + y][x1 + dx + x] & 0xffffff);
-							boolean isWhite = pixel == 0xffffff;
-							boolean isBlue = pixel  == 0x0000ff;
-							boolean isBlack = pixel == 0x000000;
+					for (int y = 0; y < d && y1 + dy + y < h; y++) {
+						int[] row = pixels[y1 + dy + y];
+						
+						for (int x = 0; x < d && x1 + dx + x < w; x++) {
+							int pixel = row[x1 + dx + x] & 0xffffff;
 							
-							if (!isWhite && !isBlack && !isBlue) {
-								throw new RuntimeException("Unexpected pixel: " + Integer.toHexString(pixel));
-							}
+//							boolean isWhite = pixel == 0xffffff;
+//							boolean isBlue = pixel == 0x0000ff;
+//							boolean isBlack = pixel == 0x000000;
+//							if (!isWhite && !isBlack && !isBlue) {
+//								throw new RuntimeException("Unexpected pixel: " + Integer.toHexString(pixel));
+//							}
+							
 							switch (pattern.getPattern()[y][x]) {
 							case INIT:
 								throw new RuntimeException();
 							case ZERO:
-								if (isBlue) {
+								if (pixel == 0x0000ff) {
 									countZero++;
 								}
 								break;
 							case HALF:
-								if (isBlue) {
+								if (pixel  == 0x0000ff) {
 									countHalf++;
 								}
 								totalHalf++;
 								break;
 							case ONE:
-								if (isBlue || isBlack) {
+								if (pixel  == 0x0000ff || pixel == 0x000000) {
 									countOne++;
 								}
 								totalOne++;
@@ -313,38 +340,10 @@ public class CellMatcher {
 			System.out.println("Matched pattern " + bestPattern);
 		}
 
-		int rgb = Pin.RED;
-		int z = 8;
-		int cellsize = d - 1;
+		cells[yi][xi].setConnections(bestPattern.getConnections());
 
-		bdx = 0;
-		bdy = 0;
-		
-		int connections = bestPattern.getConnections();
-		// top
-		if ((connections & 1) > 0) {
-			Pin.rectangle(image, x1 + bdx + (cellsize - z) / 2 + 1, y1 + bdy + 1, z, (cellsize + z) / 2, rgb, false);
-		}
-		// right
-		if ((connections & 2) > 0) {
-			Pin.rectangle(image, x2 + bdx - (cellsize + z) / 2 + 1, y1 + bdy + (cellsize - z) / 2 + 1, (cellsize + z) / 2, z, rgb, false);
-		}
-		// bottom
-		if ((connections & 4) > 0) {
-			Pin.rectangle(image, x1 + bdx + (cellsize - z) / 2 + 1, y2 + bdy - (cellsize + z) / 2 + 1, z, (cellsize + z) / 2, rgb, false);
-		}
-		// left
-		if ((connections & 8) > 0) {
-			Pin.rectangle(image, x1 + bdx + 1, y1 + bdy + (cellsize - z) / 2 + 1, (cellsize + z) / 2, z, rgb, false);
-		}
+		return;
 
-		return connections;
-
-	}
-
-	public static final void main(String[] args) {
-		CellMatcher matcher = new CellMatcher(41, 4, 4);
-		matcher.dumpPatterns();
 	}
 
 }
