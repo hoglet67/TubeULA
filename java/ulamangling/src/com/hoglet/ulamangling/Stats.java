@@ -26,8 +26,8 @@ public class Stats {
 		standardDeviation /= a.length;
 		standardDeviation = Math.sqrt(standardDeviation);
 		
-		System.out.println("# Mean = " + mean);
-		System.out.println("# Standard Deviation = " + standardDeviation);
+		//System.out.println("# Mean = " + mean);
+		//System.out.println("# Standard Deviation = " + standardDeviation);
 	}
 
 

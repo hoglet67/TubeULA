@@ -12,6 +12,7 @@ public class CellMatcher {
 	private int c;
 	private int l;
 	private int csEmitter;
+	private int delta;
 
 	private List<Pattern> patterns = new ArrayList<Pattern>();
 	private List<Pattern> patternsPlusPins = new ArrayList<Pattern>();
@@ -21,11 +22,12 @@ public class CellMatcher {
 		INIT, ZERO, HALF, ONE,
 	};
 
-	public CellMatcher(int dimension, int line, int corner, int csEmitter) {
+	public CellMatcher(int dimension, int line, int corner, int csEmitter, int delta) {
 		this.d = dimension;
 		this.l = line;
 		this.c = corner;
 		this.csEmitter = csEmitter;
+		this.delta = delta;
 		initializePatterns();
 		dumpPatterns(patterns);
 		dumpPatterns(patternsPlusPins);
@@ -242,7 +244,7 @@ public class CellMatcher {
 		}
 	}
 
-	public void match(int[][] pixels, int xi, int yi, List<Integer> xGrid, List<Integer> yGrid, BufferedImage image, Cell[][] cells) {
+	public void match(int[][] pixels, int xi, int yi, BufferedImage image, Cell[][] cells) {
 
 		if (cells[yi][xi].getType() == PinType.CS_EMITTER_2) {
 			return;
@@ -251,10 +253,12 @@ public class CellMatcher {
 		int h = pixels.length;
 		int w = pixels[0].length;
 		
-		int x1 = xGrid.get(xi);
-		int x2 = xGrid.get(xi + 1);
-		int y1 = yGrid.get(yi);
-		int y2 = yGrid.get(yi + 1);
+		int x1 = cells[yi][xi].getX1();
+		int x2 = cells[yi][xi].getX2();
+		int y1 = cells[yi][xi].getY1();
+		int y2 = cells[yi][xi].getY2();
+		
+		// System.out.println("x1=" + x1 + "; y1=" + y1 + "; x2=" + x2 + "; y2=" + y2);
 		
 		boolean log = false;
 		
@@ -276,7 +280,6 @@ public class CellMatcher {
 		
 		for (Pattern pattern : matchAgainst) {
 
-			int delta = 2;
 			int dxMin = -delta;
 			int dxMax = delta;
 			int dyMin = -delta;
@@ -285,16 +288,17 @@ public class CellMatcher {
 			if (dxMin + x1 < 0) {
 				dxMin = x1;
 			}
-			if (dxMax + x2 >= image.getWidth()) {
-				dxMax = image.getWidth() - x2 - 1;
+			if (dxMax + x2 > image.getWidth()) {
+				dxMax = image.getWidth() - x2;
 			}
 			if (dyMin + y1 < 0) {
 				dyMin = y1;
 			}
-			if (dyMax + y2 >= image.getHeight()) {
-				dyMax = image.getHeight() - y2 - 1;
+			if (dyMax + y2 > image.getHeight()) {
+				dyMax = image.getHeight() - y2;
 			}
 
+			// System.out.println("dxmin=" + dxMin + "; dymin=" + dyMin + "; dxmax" + dxMax + "; dymax=" + dyMax);
 
 			for (int dy = dyMin; dy <= dyMax; dy++) {
 				for (int dx = dxMin; dx <= dxMax; dx++) {

@@ -16,6 +16,11 @@ public class Cell {
 	private boolean dangleFail;
 	private boolean bridgeFail;
 	private boolean highlight;
+	private int x1;
+	private int y1;
+	private int x2;
+	private int y2;
+	
 
 	public Cell() {
 		this.connections = 0;
@@ -33,6 +38,10 @@ public class Cell {
 		this.dangleFail = from.dangleFail;
 		this.bridgeFail = from.bridgeFail;
 		this.highlight = from.highlight;
+		this.x1 = from.x1;
+		this.x2 = from.x2;
+		this.y1 = from.y1;
+		this.y2 = from.y2;
 	}
 
 	public int getConnections() {
@@ -139,6 +148,38 @@ public class Cell {
 
 	public boolean isHighlight() {
 		return highlight;
+	}
+
+	public int getX1() {
+		return x1;
+	}
+
+	public void setX1(int x1) {
+		this.x1 = x1;
+	}
+
+	public int getY1() {
+		return y1;
+	}
+
+	public void setY1(int y1) {
+		this.y1 = y1;
+	}
+
+	public int getX2() {
+		return x2;
+	}
+
+	public void setX2(int x2) {
+		this.x2 = x2;
+	}
+
+	public int getY2() {
+		return y2;
+	}
+
+	public void setY2(int y2) {
+		this.y2 = y2;
 	}
 
 }

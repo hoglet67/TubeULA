@@ -45,10 +45,10 @@ public class Pin extends XY {
 		return type;
 	}
 	
-	public void plot(BufferedImage image, List<Integer> xGrid, List<Integer> yGrid, int cellX, int cellY, int w, int h, int rgb) {
+	public void plot(BufferedImage image, int px, int py, int w, int h, int rgb) {
 		
-		int px = xGrid.get(cellX) + 1;
-		int py = yGrid.get(cellY) + 1;
+		px += 1;
+		py += 1;
 		
 		switch (type) {
 		case NONE:
