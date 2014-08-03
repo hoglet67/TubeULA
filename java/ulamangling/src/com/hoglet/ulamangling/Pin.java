@@ -1,7 +1,6 @@
 package com.hoglet.ulamangling;
 
 import java.awt.image.BufferedImage;
-import java.util.List;
 
 public class Pin extends XY {
 	
@@ -29,6 +28,18 @@ public class Pin extends XY {
 		CS_COLLECTOR_1,
 		CS_COLLECTOR_2,
 		CS_COLLECTOR_3,
+		HPAD_GND_1,
+		HPAD_GND_2,
+		HPAD_GND_3,
+		HPAD_GND_4,
+		HPAD_GND_5,
+		HPAD_GND_6,
+		VPAD_GND_1,
+		VPAD_GND_2,
+		VPAD_GND_3,
+		VPAD_GND_4,
+		VPAD_GND_5,
+		VPAD_GND_6,
 		CS_GND_1,
 		CS_GND_2,
 		CS_GND_3
@@ -98,6 +109,43 @@ public class Pin extends XY {
 			break;
 		case CS_GND_3:
 			rectangle(image, px , py, w * 3 / 4, h * 3 / 4, rgb);
+			break;
+		
+		case HPAD_GND_1:
+			rectangle(image, px + w / 2 , py + h / 4, w / 2, h * 3 / 4, rgb);
+			break;
+		case HPAD_GND_2:
+			rectangle(image, px, py + h / 4, w, h * 3 / 4, rgb);
+			break;
+		case HPAD_GND_3:
+			rectangle(image, px, py + h / 4, w / 2, h * 3 / 4, rgb);
+			break;
+		case HPAD_GND_4:
+			rectangle(image, px + w / 2 , py,  w / 2, h * 3 / 4, rgb);
+			break;
+		case HPAD_GND_5:
+			rectangle(image, px, py, w, h * 3 / 4, rgb);
+			break;
+		case HPAD_GND_6:
+			rectangle(image, px , py, w / 2, h * 3 / 4, rgb);
+			break;
+		case VPAD_GND_1:
+		    rectangle(image, px + w / 4, py + h / 2, w * 3 / 4, h / 2, rgb);
+			break;
+		case VPAD_GND_2:
+		    rectangle(image, px + w / 4, py, w * 3 / 4, h, rgb);
+			break;
+		case VPAD_GND_3:
+		    rectangle(image, px + w / 4, py, w * 3 / 4, h / 2, rgb);
+			break;
+		case VPAD_GND_4:
+		    rectangle(image, px, py + h / 2, w * 3 / 4,  h / 2, rgb);
+			break;
+		case VPAD_GND_5:
+		    rectangle(image, px, py, w * 3 / 4, h, rgb);
+			break;
+		case VPAD_GND_6:
+		    rectangle(image, px, py, w * 3 / 4, h / 2, rgb);
 			break;
 			
 		}		

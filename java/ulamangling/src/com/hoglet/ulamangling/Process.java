@@ -29,7 +29,7 @@ public class Process {
 	public static final boolean GRID_RECENTER = true;
 
 	// match over +- this many pixels
-	public static final int MATCH_DELTA = 1;
+	public static final int MATCH_DELTA = 0;
 
 	// Threshold used when searching for the next grid line in pixels
 	public static final int SEARCH_THRESH = 3;
@@ -46,7 +46,7 @@ public class Process {
 	// Attempt 4
 	// These values need to be manually extracted for each image
 	static {
-		startCells.put("00", new XY(5, 5));
+		startCells.put("00", new XY(0, 0));
 		blockCells.put("00", new XY(8, 8));
 		endCells.put("00", new XY(162, 177));
 	}
@@ -66,6 +66,83 @@ public class Process {
 			new Pin(9, 11, PinType.CS_GND_3), new Pin(11, 12, PinType.NORMAL), new Pin(4, 13, PinType.NORMAL),
 			new Pin(6, 13, PinType.NORMAL), new Pin(8, 13, PinType.NORMAL), new Pin(12, 13, PinType.NORMAL) };
 
+	
+	public static Pin[] horPeripheralPins = new Pin[] {
+		new Pin(1, 2, PinType.NORMAL),
+
+		new Pin(2, 2, PinType.NORMAL),
+		new Pin(3, 2, PinType.NORMAL),
+		new Pin(4, 2, PinType.NORMAL),
+		new Pin(5, 2, PinType.NORMAL),
+		new Pin(7, 2, PinType.HPAD_GND_1),
+		new Pin(8, 2, PinType.HPAD_GND_2),
+		new Pin(9, 2, PinType.HPAD_GND_2),
+		new Pin(10, 2, PinType.HPAD_GND_2),
+		new Pin(11, 2, PinType.HPAD_GND_2),
+		new Pin(12, 2, PinType.HPAD_GND_3),
+		new Pin(14, 2, PinType.NORMAL),
+		new Pin(15, 2, PinType.NORMAL),
+		new Pin(16, 2, PinType.NORMAL),
+		new Pin(17, 2, PinType.NORMAL),
+
+
+		new Pin(2, 3, PinType.NORMAL),
+		new Pin(3, 3, PinType.NORMAL),
+		new Pin(4, 3, PinType.NORMAL),
+		new Pin(5, 3, PinType.NORMAL),
+		new Pin(7, 3, PinType.HPAD_GND_4),
+		new Pin(8, 3, PinType.HPAD_GND_5),
+		new Pin(9, 3, PinType.HPAD_GND_5),
+		new Pin(10, 3, PinType.HPAD_GND_5),
+		new Pin(11, 3, PinType.HPAD_GND_5),
+		new Pin(12, 3, PinType.HPAD_GND_6),
+		new Pin(14, 3, PinType.NORMAL),
+		new Pin(15, 3, PinType.NORMAL),
+		new Pin(16, 3, PinType.NORMAL),
+		new Pin(17, 3, PinType.NORMAL),
+		
+		new Pin(18, 2, PinType.NORMAL)
+
+	};
+	
+	public static Pin[] verPeripheralPins = new Pin[] {
+		new Pin(1, 2, PinType.NORMAL),
+
+		new Pin(2, 2, PinType.NORMAL),
+		new Pin(3, 2, PinType.NORMAL),
+		new Pin(4, 2, PinType.NORMAL),
+		new Pin(5, 2, PinType.NORMAL),
+		new Pin(7, 2, PinType.VPAD_GND_1),
+		new Pin(8, 2, PinType.VPAD_GND_2),
+		new Pin(9, 2, PinType.VPAD_GND_2),
+		new Pin(10, 2, PinType.VPAD_GND_2),
+		new Pin(11, 2, PinType.VPAD_GND_2),
+		new Pin(12, 2, PinType.VPAD_GND_3),
+		new Pin(14, 2, PinType.NORMAL),
+		new Pin(15, 2, PinType.NORMAL),
+		new Pin(16, 2, PinType.NORMAL),
+		new Pin(17, 2, PinType.NORMAL),
+
+
+		new Pin(2, 3, PinType.NORMAL),
+		new Pin(3, 3, PinType.NORMAL),
+		new Pin(4, 3, PinType.NORMAL),
+		new Pin(5, 3, PinType.NORMAL),
+		new Pin(7, 3, PinType.VPAD_GND_4),
+		new Pin(8, 3, PinType.VPAD_GND_5),
+		new Pin(9, 3, PinType.VPAD_GND_5),
+		new Pin(10, 3, PinType.VPAD_GND_5),
+		new Pin(11, 3, PinType.VPAD_GND_5),
+		new Pin(12, 3, PinType.VPAD_GND_6),
+		new Pin(14, 3, PinType.NORMAL),
+		new Pin(15, 3, PinType.NORMAL),
+		new Pin(16, 3, PinType.NORMAL),
+		new Pin(17, 3, PinType.NORMAL),
+		
+		new Pin(18, 2, PinType.NORMAL)
+
+	};
+	
 	public Process() {
 	}
 
@@ -461,6 +538,54 @@ public class Process {
 					cell.setLeft();
 					cell.setTop();
 					break;
+				case HPAD_GND_1:
+					cell.setRight();
+					cell.setBottom();
+					break;
+				case HPAD_GND_2:
+					cell.setRight();
+					cell.setLeft();
+					break;
+				case HPAD_GND_3:
+					cell.setLeft();
+					cell.setBottom();
+					break;
+				case HPAD_GND_4:
+					cell.setRight();
+					cell.setTop();
+					break;
+				case HPAD_GND_5:
+					cell.setRight();
+					cell.setLeft();
+					break;
+				case HPAD_GND_6:
+					cell.setLeft();
+					cell.setTop();
+					break;
+				case VPAD_GND_1:
+					cell.setRight();
+					cell.setBottom();
+					break;
+				case VPAD_GND_2:
+					cell.setTop();
+					cell.setBottom();
+					break;
+				case VPAD_GND_3:
+					cell.setRight();
+					cell.setTop();
+					break;
+				case VPAD_GND_4:
+					cell.setLeft();
+					cell.setBottom();
+					break;
+				case VPAD_GND_5:
+					cell.setTop();
+					cell.setBottom();
+					break;
+				case VPAD_GND_6:
+					cell.setLeft();
+					cell.setTop();
+					break;
 				default:
 				}
 
@@ -546,14 +671,38 @@ public class Process {
 				}
 			}
 		}
+		// TODO Need to generalise this
 		for (int x : generateSequence(9, 10)) {
 			cells[175][x].setPin(new Pin(0, 0, PinType.NORMAL));
 		}
 		for (int y : generateSequence(9, 11)) {
 			cells[y][160].setPin(new Pin(0, 0, PinType.NORMAL));
 		}
+		for (int i = 0; i < 5; i++) {
+			addPeriperalCell(cells, horPeripheralPins, 11 + 31 * i, 0, false, false);
+		}
+		for (int i = 0; i < 6; i++) {
+			addPeriperalCell(cells, verPeripheralPins, 0, 3 + 31 * i, true, false);
+		}
+		for (int i = 0; i < 6; i++) {
+			cells[2][4 + 31 * i].setPin(new Pin(0, 0, PinType.NORMAL));
+		}
+		for (int i = 0; i < 5; i++) {
+			cells[29 + 31 * i][2].setPin(new Pin(0, 0, PinType.NORMAL));
+		}
 	}
 
+	private void addPeriperalCell(Cell[][] cells, Pin[] pins, int xi, int yi, boolean rotated, boolean mirrored) {
+		for (Pin pin : pins) {
+			int x = rotated ? pin.getY() : pin.getX();
+			int y = rotated ? pin.getX() : pin.getY();
+			if (mirrored) {
+				x = -x;
+				y = -y;
+			}
+			cells[yi + y][xi + x].setPin(pin);
+		}
+	}
 	private int[] generateSequence(int offset, int n) {
 		int[] sequence = new int[n * 6];
 		int i = 0;
@@ -785,30 +934,31 @@ public class Process {
 		for (int y = 0; y < h; y++) {
 			for (int x = 0; x < w; x++) {
 				Cell cell1 = new Cell(cellsIn[y][x]);
-				int c1 = cell1.getConnections();
-				// Check for a bridge between two vertical traces
-				if (x < w - 1) {
-					Cell cell2 = cellsIn[y][x + 1];
-					int c2 = cell2.getConnections();
-					if ((c1 == 7 || c1 == 15) && (c2 == 13 || c2 == 15)) {
-						cell1.setBridgeFail(true);
-						cell2.setBridgeFail(true);
-						failCount++;
-					}
-				}
-				// Check for a bridge between two vertical traces
-				if (y < h - 1) {
-					Cell cell2 = cellsIn[y + 1][x];
-					int c2 = cell2.getConnections();
-					if ((c1 == 14 || c1 == 15) && (c2 == 11 || c2 == 15)) {
-						cell1.setBridgeFail(true);
-						cell2.setBridgeFail(true);
-						failCount++;
-					}
-				}
-
 				if (cellsOut != null) {
 					cellsOut[y][x] = cell1;
+				}
+				if (cell1.getType().ordinal() < PinType.HPAD_GND_1.ordinal()) {
+					int c1 = cell1.getConnections();
+					// Check for a bridge between two vertical traces
+					if (x < w - 1) {
+						Cell cell2 = cellsIn[y][x + 1];
+						int c2 = cell2.getConnections();
+						if ((c1 == 7 || c1 == 15) && (c2 == 13 || c2 == 15)) {
+							cell1.setBridgeFail(true);
+							cell2.setBridgeFail(true);
+							failCount++;
+						}
+					}
+					// Check for a bridge between two vertical traces
+					if (y < h - 1) {
+						Cell cell2 = cellsIn[y + 1][x];
+						int c2 = cell2.getConnections();
+						if ((c1 == 14 || c1 == 15) && (c2 == 11 || c2 == 15)) {
+							cell1.setBridgeFail(true);
+							cell2.setBridgeFail(true);
+							failCount++;
+						}
+					}
 				}
 			}
 		}
