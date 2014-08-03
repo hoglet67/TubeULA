@@ -22,6 +22,15 @@ public class Process {
 	// Nominal cell size in pixels
 	public static final int CELL_SIZE = 40;
 
+	// Locally optimize the grid over +- this many cells
+	public static final int GRID_DELTA = 8;
+	
+	// Whether to re-center a perfectly sized cell
+	public static final boolean GRID_RECENTER = true;
+
+	// match over +- this many pixels
+	public static final int MATCH_DELTA = 1;
+
 	// Threshold used when searching for the next grid line in pixels
 	public static final int SEARCH_THRESH = 3;
 
@@ -118,15 +127,15 @@ public class Process {
 		return result;
 	}
 
-	public void convert(String name, File gridFile, File matchFile, File dstFile) throws IOException {
+	public void convert(String name, File srcFile, File dstFile) throws IOException {
 
-		CellMatcher matcher = new CellMatcher(CELL_SIZE + 1, 4, 5, 15, 2);
+		CellMatcher matcher = new CellMatcher(CELL_SIZE + 1, 4, 5, 15, MATCH_DELTA);
 
-		System.out.println("# Reading image " + gridFile);
-		BufferedImage image = ImageIO.read(gridFile);
+		System.out.println("# Reading image " + srcFile);
+		BufferedImage image = ImageIO.read(srcFile);
 		int w = image.getWidth();
 		int h = image.getHeight();
-		System.out.println("# Grid Image has " + w + " x " + h + " pixels; total = " + w * h);
+		System.out.println("# Image has " + w + " x " + h + " pixels; total = " + w * h);
 
 		XY blockCell = blockCells.get(name);
 		int blockCellX = blockCell.getX();
@@ -139,50 +148,11 @@ public class Process {
 		int[][] pixels = convertTo2DWithoutUsingGetRGB(image);
 
 		System.out.println("# Gridding image");
-
-		XY startOffset = new XY(0, 0);
-		XY endOffset = new XY(w - 1, h - 1);
-
-
 		double[] window = new double[] { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 };
-		double[] xReference = window;
-		double[] yReference = window;
+		double[] reference = new Stats(window).normalize();
 
-		xReference = new Stats(xReference).normalize();
-		yReference = new Stats(yReference).normalize();
-
-		int[] xTotals = new int[w];
-		int[] yTotals = new int[h];
-		gridHistogram(pixels, startOffset, endOffset, xTotals, yTotals);
-		double[] xNormalized = new Stats(xTotals).normalize();
-		double[] yNormalized = new Stats(yTotals).normalize();
-		double[] xCorrelation = Stats.bruteForceCorrelationCentered(xNormalized, xReference);
-		double[] yCorrelation = Stats.bruteForceCorrelationCentered(yNormalized, yReference);
-
-		List<Integer> xGrid = makeGrid(startOffset.getX(), endOffset.getX(), CELL_SIZE, xCorrelation, SEARCH_THRESH);
-		List<Integer> yGrid = makeGrid(startOffset.getY(), endOffset.getY(), CELL_SIZE, yCorrelation, SEARCH_THRESH);
-
-		Cell[][] cells = initCells(xGrid.size() - 1, yGrid.size() - 1);
-		
-		for (int yi = 0; yi < cells.length; yi++) {
-			for (int xi = 0; xi < cells[yi].length; xi++) {
-				cells[yi][xi].setX1(xGrid.get(xi));
-				cells[yi][xi].setX2(xGrid.get(xi + 1));
-				cells[yi][xi].setY1(yGrid.get(yi));
-				cells[yi][xi].setY2(yGrid.get(yi + 1));
-			}
-		}
-
-		optimizeGrid(cells, pixels, CELL_SIZE, SEARCH_THRESH);
-
-		System.out.println("# Reading image " + matchFile);
-		image = ImageIO.read(matchFile);
-		w = image.getWidth();
-		h = image.getHeight();
-		System.out.println("# Match Image has " + w + " x " + h + " pixels; total = " + w * h);
-
-		System.out.println("# Converting image");
-		pixels = convertTo2DWithoutUsingGetRGB(image);
+		Cell[][] cells = initializeGrid(w, h, pixels, reference);
+		optimizeGrid(cells, pixels, CELL_SIZE, SEARCH_THRESH, reference, GRID_DELTA, GRID_RECENTER);
 
 		System.out.println("# Matching image");
 
@@ -242,13 +212,13 @@ public class Process {
 		System.out.println("# Fixed Bridged Pairs corrected = " + ret);
 
 		ret = drcConnections(cellsOut8, null);
-		System.out.println("# Initial DRC Connections Count = " + ret);
+		System.out.println("# Final DRC Connections Count = " + ret);
 
 		ret = drcDangling(cellsOut8, null);
-		System.out.println("# Initial DRC Dangle Count = " + ret);
+		System.out.println("# Final DRC Dangle Count = " + ret);
 
 		ret = drcBridge(cellsOut8, null);
-		System.out.println("# Initial DRC Bridge Count = " + ret);
+		System.out.println("# Final DRC Bridge Count = " + ret);
 
 		// Results onto output image
 		System.out.println("# Annotating PNG");
@@ -257,6 +227,28 @@ public class Process {
 		System.out.println("# Writing PNG");
 		ImageIO.write(image, "png", dstFile);
 
+	}
+
+	private Cell[][] initializeGrid(int w, int h, int[][] pixels, double[] reference) {
+		int[] xTotals = new int[w];
+		int[] yTotals = new int[h];
+		gridHistogram(pixels, 0, 0, w, h, xTotals, yTotals);
+		double[] xNormalized = new Stats(xTotals).normalize();
+		double[] yNormalized = new Stats(yTotals).normalize();
+		double[] xCorrelation = Stats.bruteForceCorrelationCentered(xNormalized, reference);
+		double[] yCorrelation = Stats.bruteForceCorrelationCentered(yNormalized, reference);
+		List<Integer> xGrid = makeGrid(0, w, CELL_SIZE, xCorrelation, SEARCH_THRESH);
+		List<Integer> yGrid = makeGrid(0, h, CELL_SIZE, yCorrelation, SEARCH_THRESH);
+		Cell[][] cells = initCells(xGrid.size() - 1, yGrid.size() - 1);
+		for (int yi = 0; yi < cells.length; yi++) {
+			for (int xi = 0; xi < cells[yi].length; xi++) {
+				cells[yi][xi].setX1(xGrid.get(xi));
+				cells[yi][xi].setX2(xGrid.get(xi + 1));
+				cells[yi][xi].setY1(yGrid.get(yi));
+				cells[yi][xi].setY2(yGrid.get(yi + 1));
+			}
+		}
+		return cells;
 	}
 
 	private Cell[][] initCells(int w, int h) {
@@ -270,66 +262,93 @@ public class Process {
 	}
 	
 	// Optimize the grid by correlating locally over a smaller window (e.g. 16x16 cells)
-	private void optimizeGrid(Cell[][] cells, int[][] pixels, int cellsize, int search) {
-		int delta = 8;
+	private void optimizeGrid(Cell[][] cells, int[][] pixels, int cellsize, int search, double[] reference, int delta, boolean recenter) {
+		int heightInCells = cells.length;
+		int widthInCells = cells[0].length;
+		int heightInPixels = pixels.length;
+		int widthInPixels = pixels[0].length;
 		
-		int hc = cells.length;
-		int wc = cells[0].length;
-		int hp = pixels.length;
-		int wp = pixels[0].length;
+		// Reduce the complexity by reducing pixels to cells in one dimension
+		// xCells is <vertical cells> x <horizontal pixels>
+		// yCells is <horizontal cells> x <vertical pixels> 
+		int[][] xCells = new int[heightInCells][widthInPixels];
+		int[][] yCells = new int[widthInCells][heightInPixels];
+		for (int yi = 0; yi < heightInCells; yi++) {
+			for (int xi = 0; xi < widthInCells; xi++) {
+				for (int y = yi * cellsize; y < (yi  + 1) * cellsize; y++) {
+					for (int x = xi * cellsize; x < (xi + 1) * cellsize; x++) {
+						int rgb = pixels[y][x];
+						int val = (rgb & 0xffffff) == 0x0000ff ? 1 : 0;
+						xCells[yi][x] += val;
+						yCells[xi][y] += val;
+					}
+				}
+			}
+		}
 		
-		double[] window = new double[] { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 };
-		double reference[] = new Stats(window).normalize();
-
 		int[] xTotals = new int[2 * delta * cellsize];
 		int[] yTotals = new int[2 * delta * cellsize];
 
-		for (int yi = 0; yi < hc; yi++) {
-			for (int xi = 0; xi < wc; xi++) {
+		for (int yi = 0; yi < heightInCells; yi++) {
+			for (int xi = 0; xi < widthInCells; xi++) {
 				
 				Cell cell = cells[yi][xi];
 				
-				// Top Left Corner of the window to correlate over, ideally centered on the cell
-				XY startOffset = new XY(findStart(xi, delta, 0, wc) * cellsize, findStart(yi, delta, 0, hc) * cellsize);
+				// Top Left corner of the window to correlate over, ideally centred on the cell
+				int cellx1 = findStart(xi, delta, 0, widthInCells);
+				int celly1 = findStart(yi, delta, 0, heightInCells);
+				int pixelx1 = cellx1 * cellsize;
+				int pixely1 = celly1 * cellsize;
+				
+				// Bottom Right corner of the window to correlate over, ideally centred on the cell
+				int cellx2 = cellx1 + 2 * delta;
+				int celly2 = celly1 + 2 * delta;
+								
+				totalCells(xCells, celly1, celly2, pixelx1, xTotals);
+				totalCells(yCells, cellx1, cellx2, pixely1, yTotals);
 
-				// Bottom Rightof the window to correlate over, ideally centered on the cell
-				XY endOffset = new XY(startOffset.getX() + 2 * delta * cellsize, startOffset.getY() + 2 * delta * cellsize);
-
-				// Total the rows and columns within this window
-				gridHistogram(pixels, startOffset, endOffset, xTotals, yTotals);
 				double[] xNormalized = new Stats(xTotals).normalize();
 				double[] yNormalized = new Stats(yTotals).normalize();
 				
 				// Correlate these with the reference
 				double[] xCorrelation = Stats.bruteForceCorrelationCentered(xNormalized, reference);
 				double[] yCorrelation = Stats.bruteForceCorrelationCentered(yNormalized, reference);
-
+							
 				int x1 = cell.getX1();
 				int x2 = cell.getX2();
 				int y1 = cell.getY1();
 				int y2 = cell.getY2();
-				//System.out.println(" Before x1=" + x1 + "; y1=" + y1 + "; x2=" + x2 + "; y2=" + y2);
 				
 				// Search for a local maximum within += search pixels
-				x1 = startOffset.getX() + searchForOptimum(x1 - startOffset.getX(), xCorrelation, search);
-				x2 = startOffset.getX() + searchForOptimum(x2 - startOffset.getX(), xCorrelation, search);
-				y1 = startOffset.getY() + searchForOptimum(y1 - startOffset.getY(), yCorrelation, search);
-				y2 = startOffset.getY() + searchForOptimum(y2 - startOffset.getY(), yCorrelation, search);
-				
-				//System.out.println(" After x1=" + x1 + "; y1=" + y1 + "; x2=" + x2 + "; y2=" + y2);
+				x1 = pixelx1 + searchForOptimum(x1 - pixelx1, xCorrelation, search);
+				x2 = pixelx1 + searchForOptimum(x2 - pixelx1, xCorrelation, search);
+				y1 = pixely1 + searchForOptimum(y1 - pixely1, yCorrelation, search);
+				y2 = pixely1 + searchForOptimum(y2 - pixely1, yCorrelation, search);
 
+				// Place a perfect cell on the centre
+				if (recenter) {
+					x1 = (x1 + x2 - cellsize) / 2;
+					y1 = (y1 + y2 - cellsize) / 2;
+					x2 = x1 + cellsize;
+					y2 = y1 + cellsize;
+				}
+				
 				// Sanity check these
 				if (x1 < 0) {
+					//System.out.println("x1 out of range (0 .." + (widthInPixels - 1) + ":" + x1);
 					x1 = 0;
 				}
 				if (y1 < 0) {
+					//System.out.println("y1 out of range (0 .." + (heightInPixels - 1) + ":" + y1);
 					y1 = 0;
 				}
-				if (x2 >= wp - 1) {
-					x2 = wp - 1;
+				if (x2 >= widthInPixels - 1) {
+					//System.out.println("x2 out of range (0 .." + (widthInPixels - 1) + ":" + x2);
+					x2 = widthInPixels - 1;
 				}
-				if (y2 > hp - 1) {
-					y2 = hp - 1;
+				if (y2 > heightInPixels - 1) {
+					//System.out.println("y2 out of range (0 .." + (heightInPixels - 1) + ":" + y2);
+					y2 = heightInPixels - 1;
 				}
 
 				// Update the cell
@@ -339,6 +358,17 @@ public class Process {
 				cell.setY2(y2);
 				
 			}
+		}
+	}
+	
+	
+	private void totalCells(int[][] cells, int startCell, int endCell, int startPixel, int[] totals) {
+		for (int i = 0; i < totals.length; i++) {
+			int total = 0;
+			for (int cell = startCell; cell < endCell; cell++) {
+				total += cells[cell][startPixel + i];
+			}
+			totals[i] = total;
 		}
 	}
 	
@@ -453,7 +483,7 @@ public class Process {
 				int w = x2 - x1;
 				int h = y2 - y1;
 
-				//System.out.println("x1=" + x1 + "; y1=" + y1 + "; x2=" + x2 + "; y2=" + y2);
+				// System.out.println("x1=" + x1 + "; y1=" + y1 + "; x2=" + x2 + "; y2=" + y2 + "; w=" + w + "; h=" + h);
 				
 				// Overlay grid on image
 				for (int y = 0; y < h; y++) {
@@ -548,13 +578,13 @@ public class Process {
 	private List<Integer> makeGrid(int startOffset, int endOffset, int cellsize, double[] correlation, int search) {
 		List<Integer> grid = new ArrayList<Integer>();
 		int i = startOffset;
-		while (i <= endOffset) {
+		while (i < endOffset) {
 			i = searchForOptimum(i, correlation, search);
 			grid.add(i);
 			i += cellsize;
 		}
 		if (i - endOffset < cellsize / 2) {
-			grid.add(endOffset);
+			grid.add(endOffset - 1);
 		}
 		return grid;
 	}
@@ -599,12 +629,12 @@ public class Process {
 		System.out.println("\n");
 	}
 
-	private void gridHistogram(int[][] pixels, XY startOffset, XY endOffset, int[] xTotals, int[] yTotals) {
+	private void gridHistogram(int[][] pixels, int x1, int y1, int x2, int y2, int[] xTotals, int[] yTotals) {
 		Arrays.fill(xTotals, 0);
 		Arrays.fill(yTotals, 0);
-		for (int y = 0; y < endOffset.getY() - startOffset.getY(); y++) {
-			for (int x = 0; x < endOffset.getX() - startOffset.getX(); x++) {
-				int rgb = pixels[startOffset.getY() + y][startOffset.getX() + x];
+		for (int y = 0; y < y2 - y1; y++) {
+			for (int x = 0; x < x2 - x1; x++) {
+				int rgb = pixels[y1 + y][x1 + x];
 				// black is 0xff000000 -- ignore
 				// blue metalization is 0xff0000ff -- use this colour only
 				// white background is 0xffffffff -- ignore
@@ -614,6 +644,7 @@ public class Process {
 			}
 		}
 	}
+
 
 	@SuppressWarnings("unused")
 	private void hueHistogram(int[][] pixels, Map<Integer, Integer> histo) {
@@ -643,38 +674,27 @@ public class Process {
 
 	public static final void main(String[] args) {
 		try {
-			if (args.length != 3) {
-				System.err.println("usage: java -jar ulamangling.jar <Grid PNG> <Match PNG> <Dst PNG> ");
+			if (args.length != 2) {
+				System.err.println("usage: java -jar ulamangling.jar <Src PNG> <Dst PNG> ");
 				System.exit(1);
 			}
-			File gridFile = new File(args[0]);
-			if (!gridFile.exists()) {
-				System.err.println("Grid File: " + gridFile + " does not exist");
+			File srcFile = new File(args[0]);
+			if (!srcFile.exists()) {
+				System.err.println("Src File: " + srcFile + " does not exist");
 				System.exit(1);
 			}
-			if (!gridFile.isFile()) {
-				System.err.println("Grid File: " + gridFile + " is not a file");
+			if (!srcFile.isFile()) {
+				System.err.println("Src File: " + srcFile + " is not a file");
 				System.exit(1);
 			}
-			File matchFile = new File(args[1]);
-			if (!matchFile.exists()) {
-				System.err.println("Match File: " + matchFile + " does not exist");
-				System.exit(1);
-			}
-			if (!matchFile.isFile()) {
-				System.err.println("Match File: " + matchFile + " is not a file");
-				System.exit(1);
-			}
-
-			File dstFile = new File(args[2]);
+			File dstFile = new File(args[1]);
 
 			Process c = new Process();
-
-			String name = gridFile.getName();
+			String name = srcFile.getName();
 			name = name.substring(name.indexOf('_') + 1, name.lastIndexOf('.'));
 			System.out.println("# name = " + name);
 
-			c.convert(name, gridFile, matchFile, dstFile);
+			c.convert(name, srcFile, dstFile);
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -697,36 +717,36 @@ public class Process {
 				int connections = cellsIn[y][x].getConnections();
 				// Check connectivity with cell above
 				if ((connections & 1) > 0) {
-					if ((y > 0) && ((cellsIn[y - 1][x].getConnections() & 4) == 0)) {
+					if ((y == 0) || ((cellsIn[y - 1][x].getConnections() & 4) == 0)) {
 						failCount++;
 						cell.setConnectionsFail(true);
-						cell.setConnections(cell.getConnections() & 14);
+						cell.clearTop();
 					}
 				}
 				// Check connectivity with cell to right
 				if ((connections & 2) > 0) {
-					if ((x < w - 1) && ((cellsIn[y][x + 1].getConnections() & 8) == 0)) {
+					if ((x == w - 1) || ((cellsIn[y][x + 1].getConnections() & 8) == 0)) {
 						failCount++;
 						cell.setConnectionsFail(true);
-						cell.setConnections(cell.getConnections() & 13);
+						cell.clearRight();
 					}
 				}
 
 				// Check connectivity with cell below
 				if ((connections & 4) > 0) {
-					if ((y < h - 1) && ((cellsIn[y + 1][x].getConnections() & 1) == 0)) {
+					if ((y == h - 1) || ((cellsIn[y + 1][x].getConnections() & 1) == 0)) {
 						failCount++;
 						cell.setConnectionsFail(true);
-						cell.setConnections(cell.getConnections() & 11);
+						cell.clearBottom();
 					}
 				}
 
 				// Check connectivity with cell to left
 				if ((connections & 8) > 0) {
-					if ((x > 0) && ((cellsIn[y][x - 1].getConnections() & 2) == 0)) {
+					if ((x == 0) || ((cellsIn[y][x - 1].getConnections() & 2) == 0)) {
 						failCount++;
 						cell.setConnectionsFail(true);
-						cell.setConnections(cell.getConnections() & 7);
+						cell.clearLeft();
 					}
 				}
 			}
