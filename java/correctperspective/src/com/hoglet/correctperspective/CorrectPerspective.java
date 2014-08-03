@@ -32,8 +32,8 @@ public class CorrectPerspective {
 				System.out.println(jiioWriter.getClass().getName());
 			} while (iter.hasNext());
 
-			String src = "../../attempt3/xxx_00.png";
-			String dst = "pertest.png";
+			String src = "../../attempt6/xxx_00.png";
+			String dst = "../../attempt6/yyy_00.png";
 
 			System.out.println("Reading image");
 			// BufferedImage image = ImageIO.read(src);
@@ -53,7 +53,7 @@ public class CorrectPerspective {
 			// double yp[] = new double[] { 2151, 2151, 8838, 8838};
 
 			double x[] = new double[] { 1862, 8256, 8216, 1821 };
-			double y[] = new double[] { 1887, 1931, 8878, 8828 };
+			double y[] = new double[] { 1887, 1931, 8876, 8828 };
 
 			int origin = 0;
 			int cellsize = 40;

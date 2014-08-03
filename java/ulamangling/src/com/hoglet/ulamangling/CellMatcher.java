@@ -11,21 +11,25 @@ public class CellMatcher {
 	private int d;
 	private int c;
 	private int l;
+	private int csEmitter;
 
 	private List<Pattern> patterns = new ArrayList<Pattern>();
 	private List<Pattern> patternsPlusPins = new ArrayList<Pattern>();
+	private List<Pattern> patternsCsEmitter5 = new ArrayList<Pattern>();
 
 	public enum Region {
 		INIT, ZERO, HALF, ONE,
 	};
 
-	public CellMatcher(int dimension, int line, int corner) {
+	public CellMatcher(int dimension, int line, int corner, int csEmitter) {
 		this.d = dimension;
 		this.l = line;
 		this.c = corner;
+		this.csEmitter = csEmitter;
 		initializePatterns();
 		dumpPatterns(patterns);
 		dumpPatterns(patternsPlusPins);
+		dumpPatterns(patternsCsEmitter5);
 	}
 
 	private void initializePatterns() {
@@ -61,46 +65,53 @@ public class CellMatcher {
 
 		Region[][] cell4 = getCell4();
 
-		patterns.add(new Pattern(cell0, 0));
+		patterns.add(new Pattern("cell0", cell0, 0));
 
-		patterns.add(new Pattern(cell1_0, 1));
-		patterns.add(new Pattern(cell1_90, 2));
-		patterns.add(new Pattern(cell1_180, 4));
-		patterns.add(new Pattern(cell1_270, 8));
+		patterns.add(new Pattern("cell1_0", cell1_0, 1));
+		patterns.add(new Pattern("cell1_90", cell1_90, 2));
+		patterns.add(new Pattern("cell1_180", cell1_180, 4));
+		patterns.add(new Pattern("cell1_270", cell1_270, 8));
 
-		patterns.add(new Pattern(cell2a_0, 3));
-		patterns.add(new Pattern(cell2a_90, 6));
-		patterns.add(new Pattern(cell2a_180, 12));
-		patterns.add(new Pattern(cell2a_270, 9));
+		patterns.add(new Pattern("cell2a_0", cell2a_0, 3));
+		patterns.add(new Pattern("cell2a_90", cell2a_90, 6));
+		patterns.add(new Pattern("cell2a_180", cell2a_180, 12));
+		patterns.add(new Pattern("cell2a_270", cell2a_270, 9));
 
-		patterns.add(new Pattern(cell2b_0, 5));
-		patterns.add(new Pattern(cell2b_90, 10));
+		patterns.add(new Pattern("cell2b_0", cell2b_0, 5));
+		patterns.add(new Pattern("cell2b_90", cell2b_90, 10));
 
-		patterns.add(new Pattern(cell2c_0, 3));
-		patterns.add(new Pattern(cell2c_90, 6));
-		patterns.add(new Pattern(cell2c_180, 12));
-		patterns.add(new Pattern(cell2c_270, 9));
+		patterns.add(new Pattern("cell2c_0", cell2c_0, 3));
+		patterns.add(new Pattern("cell2c_90", cell2c_90, 6));
+		patterns.add(new Pattern("cell2c_180", cell2c_180, 12));
+		patterns.add(new Pattern("cell2c_270", cell2c_270, 9));
 
-		patterns.add(new Pattern(cell3a_0, 7));
-		patterns.add(new Pattern(cell3a_90, 14));
-		patterns.add(new Pattern(cell3a_180, 13));
-		patterns.add(new Pattern(cell3a_270, 11));
+		patterns.add(new Pattern("cell3a_0", cell3a_0, 7));
+		patterns.add(new Pattern("cell3a_90", cell3a_90, 14));
+		patterns.add(new Pattern("cell3a_180", cell3a_180, 13));
+		patterns.add(new Pattern("cell3a_270", cell3a_270, 11));
 		
-		patterns.add(new Pattern(cell3b_0, 7));
-		patterns.add(new Pattern(cell3b_90, 14));
-		patterns.add(new Pattern(cell3b_180, 13));
-		patterns.add(new Pattern(cell3b_270, 11));
+		patterns.add(new Pattern("cell3b_0", cell3b_0, 7));
+		patterns.add(new Pattern("cell3b_90", cell3b_90, 14));
+		patterns.add(new Pattern("cell3b_180", cell3b_180, 13));
+		patterns.add(new Pattern("cell3b_270", cell3b_270, 11));
 		
-		patterns.add(new Pattern(cell4, 15));
+		patterns.add(new Pattern("cell4", cell4, 15));
 		
 		// Deep copy as we are about to change the pattern
 		patternsPlusPins = new ArrayList<Pattern>();
 		for (Pattern p : patterns) {
 			Pattern pPlusPins = new Pattern(p);
+			pPlusPins.setName(p.getName() + "_with_pin");
 			// TODO: More accurately draw the expected pin in the pattern
 			rectangle(pPlusPins.getPattern(), d / 4, d / 4, d - d / 2, d - d / 2, Region.ONE);
 			patternsPlusPins.add(pPlusPins);
 		}
+		
+		
+		patternsCsEmitter5 = new ArrayList<Pattern>();
+		patternsCsEmitter5.add(new Pattern("getCsEmitter5Open", getCsEmitter5Open(), 0));
+		patternsCsEmitter5.add(new Pattern("getCsEmitter5Closed", getCsEmitter5Closed(), 10));
+
 	}
 
 	public void dumpPatterns(List<Pattern> patterns) {
@@ -200,6 +211,19 @@ public class CellMatcher {
 		return cell;
 	}
 
+	private Region[][] getCsEmitter5Open() {
+		Region[][] cell = getCell0();
+		rectangle(cell, 0, 0, csEmitter, d - c, Region.ONE);
+		rectangle(cell, d - csEmitter, 0, csEmitter, d - c, Region.ONE);
+		return cell;
+	}
+	private Region[][] getCsEmitter5Closed() {
+		Region[][] cell = getCsEmitter5Open();
+		rectangle(cell, csEmitter, c, d - csEmitter - csEmitter, d - c - c, Region.ONE);
+		rectangle(cell, csEmitter, c + l, d - csEmitter - csEmitter, d - c - c - l - l, Region.HALF);
+		return cell;
+	}
+	
 	private Region[][] rotateCell(Region[][] in) {
 		Region[][] cell = new Region[d][d];
 		for (int x = 0; x < d; x++) {
@@ -220,12 +244,10 @@ public class CellMatcher {
 
 	public void match(int[][] pixels, int xi, int yi, List<Integer> xGrid, List<Integer> yGrid, BufferedImage image, Cell[][] cells) {
 
-		if (cells[yi][xi].getType() == PinType.CS_EMITTER_2 || cells[yi][xi].getType() == PinType.CS_EMITTER_5) {
+		if (cells[yi][xi].getType() == PinType.CS_EMITTER_2) {
 			return;
 		}
-		
-		
-		
+
 		int h = pixels.length;
 		int w = pixels[0].length;
 		
@@ -239,14 +261,18 @@ public class CellMatcher {
 		Pattern bestPattern = null;
 		int bestMad = Integer.MAX_VALUE;
 
-		int bdx = 0;
-		int bdy = 0;
-
 		// If we know there is a pin in this cell, the use set of patterns that include pins
 		// Note: We could be smarter here, because not all pins in the plot were blue
 		boolean pinPresent = cells[yi][xi].getType() != PinType.NONE;
 		
-		List<Pattern> matchAgainst = pinPresent ?  patternsPlusPins : patterns;
+		List<Pattern> matchAgainst;
+		if (cells[yi][xi].getType() == PinType.CS_EMITTER_5) {
+			matchAgainst = patternsCsEmitter5;
+		} else if (pinPresent) {
+			matchAgainst = patternsPlusPins;
+		} else {
+			matchAgainst = patterns;
+		}
 		
 		for (Pattern pattern : matchAgainst) {
 
@@ -320,7 +346,7 @@ public class CellMatcher {
 					int mad = (totalOne - countOne) + (countZero) + Math.abs(2 * totalHalf / 15 - countHalf);
 
 					if (log) {
-						System.out.println("Pattern=" + pattern.getConnections() + "; CZ=" + countZero + "; CH=" + countHalf
+						System.out.println("Pattern=" + pattern + "; dx=" + dx + "; dy=" + dy + "; CZ=" + countZero + "; CH=" + countHalf
 								+ "; CO=" + countOne + "; TZ=" + totalZero + "; TH=" + totalHalf + "; TO=" + totalOne + "; mad="
 								+ mad);
 					}
@@ -328,8 +354,6 @@ public class CellMatcher {
 					if (mad < bestMad) {
 						bestMad = mad;
 						bestPattern = pattern;
-						bdx = dx;
-						bdy = dy;
 					}
 
 				}

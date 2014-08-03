@@ -122,7 +122,7 @@ public class Process {
 
 	public void convert(String name, File gridFile, File matchFile, File dstFile) throws IOException {
 
-		CellMatcher matcher = new CellMatcher(CELL_SIZE + 1, 4, 5);
+		CellMatcher matcher = new CellMatcher(CELL_SIZE + 1, 4, 5, 15);
 
 		System.out.println("# Reading image " + gridFile);
 		BufferedImage image = ImageIO.read(gridFile);
@@ -298,14 +298,25 @@ public class Process {
 					cell.setBottom();
 					break;
 				case CS_EMITTER_4:
-					cell.clearRight();
+					// Detect the case where the two emitters are joined, and join it properly
+					if (cells[yi][xi + 1].isLeft()) {
+						cell.setRight();
+					} else {
+						cell.clearRight();						
+					}
 					cell.setTop();
 					break;
 				case CS_EMITTER_5:
-					cell.setConnections(0);
+					cell.clearTop();
+					cell.clearBottom();
 					break;
 				case CS_EMITTER_6:
-					cell.clearLeft();
+					// Detect the case where the two emitters are joined, and join it properly
+					if (cells[yi][xi - 1].isRight()) {
+						cell.setLeft();
+					} else {
+						cell.clearLeft();
+					}
 					cell.setTop();
 					break;
 				case CS_BASE_1:
@@ -502,9 +513,10 @@ public class Process {
 		for (int y = startOffset.getY(); y < endOffset.getY(); y++) {
 			for (int x = startOffset.getX(); x < endOffset.getX(); x++) {
 				int rgb = pixels[y][x];
-				// metalization is 0xff0000ff
-				// background is 0xffffffff
-				int val = (rgb & 0xff0000) < 128 ? 1 : 0;
+				// black             is 0xff000000 -- ignore
+				// blue metalization is 0xff0000ff -- use this colour only
+				// white background  is 0xffffffff -- ignore
+				int val = (rgb & 0xffffff) == 0x0000ff ? 1 : 0;
 				xTotals[x] += val;
 				yTotals[y] += val;
 			}
