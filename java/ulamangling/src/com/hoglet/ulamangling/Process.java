@@ -29,10 +29,18 @@ public class Process {
 	public static final boolean GRID_RECENTER = true;
 
 	// match over +- this many pixels
-	public static final int MATCH_DELTA = 0;
+	public static final int MATCH_DELTA = 1;
 
 	// Threshold used when searching for the next grid line in pixels
 	public static final int SEARCH_THRESH = 3;
+	
+	// Threshold used when determining when determine connectivity to an
+	// adjacent cell
+	public static final int CONNECT_THRESH = 20;
+	
+	// Threshold used when determining when determine connectivity to an
+	// adjacent cell
+	public static final int BLANK_THRESH = 100;
 
 	// The X,Y coordinates of the top,left of the ULA cell grid
 	public static Map<String, XY> startCells = new HashMap<String, XY>();
@@ -43,12 +51,154 @@ public class Process {
 	// The X,Y coordinates of the top,left of the ULA cell grid
 	public static Map<String, XY> endCells = new HashMap<String, XY>();
 
-	// Attempt 4
+	// The list of IO Pins
+	public static Map<String, Pin[]> ioPinLists = new HashMap<String, Pin[]>();
+	
+	// Attempt 6
 	// These values need to be manually extracted for each image
 	static {
-		startCells.put("00", new XY(0, 0));
+
+		startCells.put("00", new XY(5, 5));
 		blockCells.put("00", new XY(8, 8));
 		endCells.put("00", new XY(162, 177));
+		ioPinLists.put("00", new Pin[] {
+				new Pin(29, 5, "PA2"),
+				new Pin(45, 5, "DACK"),
+				new Pin(79, 5, "PNWDS"),
+				new Pin(154, 5, "PNRDS"),
+				new Pin(159, 5, "PCS"),
+				new Pin(5, 6, "PA1"),
+				new Pin(5, 23, "PA0"),
+				new Pin(5, 91, "PD7IN"),
+				new Pin(5, 112, "PD7OUT"),
+				new Pin(5, 143, "PD6OUT"),
+				new Pin(5, 71, "PDOE"),
+				new Pin(5, 177, "PDOE"),
+				new Pin(34, 5, "PDOE"),
+				new Pin(86, 5, "PDOE"),
+				new Pin(136, 5, "PDOE"),
+				new Pin(138, 5, "PDOEA"),
+				new Pin(151, 5, "PDOEB")
+		});
+		
+		startCells.put("10", new XY(0, 5));
+		blockCells.put("10", new XY(6, 8));
+		endCells.put("10", new XY(160, 177));
+		ioPinLists.put("10", new Pin[] {
+				new Pin(160, 5, "HRST")
+		});
+
+		startCells.put("20", new XY(0, 5));
+		blockCells.put("20", new XY(6, 8));
+		endCells.put("20", new XY(158, 177));
+		ioPinLists.put("20", new Pin[] {
+				new Pin(3, 5, "HRST"),
+				new Pin(8, 5, "HO2"),
+				new Pin(96, 5, "HCS"),
+				new Pin(109, 5, "HRW"),
+				new Pin(147, 5, "HA2"),
+				new Pin(158, 22, "HA1"),
+				new Pin(158, 53, "HA0"),
+				new Pin(158, 83, "HD7IN"),
+				new Pin(158, 112, "HD7OUT"),
+				new Pin(158, 143, "HD6OUT"),
+				new Pin(158, 176, "HD6IN"),
+
+				new Pin(26, 5, "HDOE"),
+				new Pin(65, 5, "HDOE"),
+				new Pin(97, 5, "HDOE"),
+				new Pin(108, 5, "HDOE"),
+				new Pin(128, 5, "HDOE"),
+				new Pin(158, 71, "HDOE"),
+				new Pin(158, 158, "HDOE"),
+				new Pin(158, 164, "HDOE"),
+				new Pin(158, 177, "HDOE"),
+				new Pin(24, 5, "HDOEA")
+		});
+		
+		startCells.put("01", new XY(5, 0));
+		blockCells.put("01", new XY(8, 6));
+		endCells.put("01", new XY(162, 175));
+		ioPinLists.put("01", new Pin[] {
+				new Pin(5, 2, "PD6IN"),
+				new Pin(5, 30, "PD5OUT"),
+				new Pin(5, 106, "PD5IN"),
+				new Pin(5, 121, "PD4OUT"),
+				new Pin(5, 142, "PD4IN"),
+				new Pin(5, 173, "PD3IN"),
+				new Pin(5, 1, "PDOE"),
+				new Pin(5, 161, "PDOE"),
+				new Pin(5, 169, "PDOE"),
+				new Pin(5, 174, "PDOE")
+		});
+
+		startCells.put("11", new XY(0, 0));
+		blockCells.put("11", new XY(6, 6));
+		endCells.put("11", new XY(160, 175));
+		ioPinLists.put("11", new Pin[] {
+		});
+		
+		startCells.put("21", new XY(0, 0));
+		blockCells.put("21", new XY(6, 6));
+		endCells.put("21", new XY(158, 175));
+		ioPinLists.put("21", new Pin[] {
+				new Pin(158, 23, "HD5OUT"),
+				new Pin(158, 97, "HD5IN"),
+				new Pin(158, 121, "HD4OUT"),
+				new Pin(158, 150, "HD4IN"),
+				new Pin(158, 0, "HDOE"),
+				new Pin(158, 38, "HDOE"),
+				new Pin(158, 45, "HDOE"),
+				new Pin(158, 161, "HDOE")
+		});
+		
+		startCells.put("02", new XY(5, 0));
+		blockCells.put("02", new XY(8, 6));
+		endCells.put("02", new XY(162, 172));
+		ioPinLists.put("02", new Pin[] {
+				new Pin(5, 34, "PD3OUT"),
+				new Pin(5, 65, "PD3OUT"),
+				new Pin(5, 76, "PD2IN"),
+				new Pin(5, 127, "PD1OUT"),
+				new Pin(5, 148, "PD1IN"),
+				new Pin(7, 172, "PD0OUT"),
+				new Pin(35, 172, "PD0IN"),
+				new Pin(160, 172, "PIRQ"),
+				new Pin(157, 172, "PRST"),
+				new Pin(138, 172, "DRQ"),
+				new Pin(5, 2, "PDOE"),
+				new Pin(5, 167, "PDOE"),
+				new Pin(5, 172, "PDOE")
+		});
+
+		startCells.put("12", new XY(0, 0));
+		blockCells.put("12", new XY(6, 6));
+		endCells.put("12", new XY(160, 172));
+		ioPinLists.put("12", new Pin[] {
+				new Pin(153, 172, "HIRQ"),
+				new Pin(160, 172, "PNMI")
+		});
+
+		startCells.put("22", new XY(0, 0));
+		blockCells.put("22", new XY(6, 6));
+		endCells.put("22", new XY(158, 172));
+		ioPinLists.put("22", new Pin[] {
+				new Pin(158, 3, "HD3OUT"),
+				new Pin(158, 32, "HD3IN"),
+				new Pin(158, 65, "HD2OUT"),
+				new Pin(158, 94, "HD2IN"),
+				new Pin(158, 127, "HD1OUT"),
+				new Pin(158, 156, "HD1IN"),
+				new Pin(155, 172, "HD0OUT"),
+				new Pin(119, 172, "HD0IN"),
+				new Pin(158, 0, "HDOE"),
+				new Pin(158, 43, "HDOE"),
+				new Pin(158, 50, "HDOE"),
+				new Pin(158, 105, "HDOE"),
+				new Pin(158, 112, "HDOE"),
+				new Pin(158, 167, "HDOE"),
+				new Pin(157, 172, "HDOE")
+		});
 	}
 
 	public static Pin[] cellPins = new Pin[] { new Pin(4, 1, PinType.NORMAL), new Pin(6, 1, PinType.NORMAL),
@@ -67,81 +217,6 @@ public class Process {
 			new Pin(6, 13, PinType.NORMAL), new Pin(8, 13, PinType.NORMAL), new Pin(12, 13, PinType.NORMAL) };
 
 	
-	public static Pin[] horPeripheralPins = new Pin[] {
-		new Pin(1, 2, PinType.NORMAL),
-
-		new Pin(2, 2, PinType.NORMAL),
-		new Pin(3, 2, PinType.NORMAL),
-		new Pin(4, 2, PinType.NORMAL),
-		new Pin(5, 2, PinType.NORMAL),
-		new Pin(7, 2, PinType.HPAD_GND_1),
-		new Pin(8, 2, PinType.HPAD_GND_2),
-		new Pin(9, 2, PinType.HPAD_GND_2),
-		new Pin(10, 2, PinType.HPAD_GND_2),
-		new Pin(11, 2, PinType.HPAD_GND_2),
-		new Pin(12, 2, PinType.HPAD_GND_3),
-		new Pin(14, 2, PinType.NORMAL),
-		new Pin(15, 2, PinType.NORMAL),
-		new Pin(16, 2, PinType.NORMAL),
-		new Pin(17, 2, PinType.NORMAL),
-
-
-		new Pin(2, 3, PinType.NORMAL),
-		new Pin(3, 3, PinType.NORMAL),
-		new Pin(4, 3, PinType.NORMAL),
-		new Pin(5, 3, PinType.NORMAL),
-		new Pin(7, 3, PinType.HPAD_GND_4),
-		new Pin(8, 3, PinType.HPAD_GND_5),
-		new Pin(9, 3, PinType.HPAD_GND_5),
-		new Pin(10, 3, PinType.HPAD_GND_5),
-		new Pin(11, 3, PinType.HPAD_GND_5),
-		new Pin(12, 3, PinType.HPAD_GND_6),
-		new Pin(14, 3, PinType.NORMAL),
-		new Pin(15, 3, PinType.NORMAL),
-		new Pin(16, 3, PinType.NORMAL),
-		new Pin(17, 3, PinType.NORMAL),
-		
-		new Pin(18, 2, PinType.NORMAL)
-
-	};
-	
-	public static Pin[] verPeripheralPins = new Pin[] {
-		new Pin(1, 2, PinType.NORMAL),
-
-		new Pin(2, 2, PinType.NORMAL),
-		new Pin(3, 2, PinType.NORMAL),
-		new Pin(4, 2, PinType.NORMAL),
-		new Pin(5, 2, PinType.NORMAL),
-		new Pin(7, 2, PinType.VPAD_GND_1),
-		new Pin(8, 2, PinType.VPAD_GND_2),
-		new Pin(9, 2, PinType.VPAD_GND_2),
-		new Pin(10, 2, PinType.VPAD_GND_2),
-		new Pin(11, 2, PinType.VPAD_GND_2),
-		new Pin(12, 2, PinType.VPAD_GND_3),
-		new Pin(14, 2, PinType.NORMAL),
-		new Pin(15, 2, PinType.NORMAL),
-		new Pin(16, 2, PinType.NORMAL),
-		new Pin(17, 2, PinType.NORMAL),
-
-
-		new Pin(2, 3, PinType.NORMAL),
-		new Pin(3, 3, PinType.NORMAL),
-		new Pin(4, 3, PinType.NORMAL),
-		new Pin(5, 3, PinType.NORMAL),
-		new Pin(7, 3, PinType.VPAD_GND_4),
-		new Pin(8, 3, PinType.VPAD_GND_5),
-		new Pin(9, 3, PinType.VPAD_GND_5),
-		new Pin(10, 3, PinType.VPAD_GND_5),
-		new Pin(11, 3, PinType.VPAD_GND_5),
-		new Pin(12, 3, PinType.VPAD_GND_6),
-		new Pin(14, 3, PinType.NORMAL),
-		new Pin(15, 3, PinType.NORMAL),
-		new Pin(16, 3, PinType.NORMAL),
-		new Pin(17, 3, PinType.NORMAL),
-		
-		new Pin(18, 2, PinType.NORMAL)
-
-	};
 	
 	public Process() {
 	}
@@ -206,7 +281,7 @@ public class Process {
 
 	public void convert(String name, File srcFile, File dstFile) throws IOException {
 
-		CellMatcher matcher = new CellMatcher(CELL_SIZE + 1, 4, 5, 15, MATCH_DELTA);
+		CellMatcher matcher = new CellMatcher(CELL_SIZE + 1, 4, 5, 15, MATCH_DELTA, BLANK_THRESH, CONNECT_THRESH);
 
 		System.out.println("# Reading image " + srcFile);
 		BufferedImage image = ImageIO.read(srcFile);
@@ -215,11 +290,9 @@ public class Process {
 		System.out.println("# Image has " + w + " x " + h + " pixels; total = " + w * h);
 
 		XY blockCell = blockCells.get(name);
-		int blockCellX = blockCell.getX();
-		int blockCellY = blockCell.getY();
-
 		XY startCell = startCells.get(name);
 		XY endCell = endCells.get(name);
+		Pin[] ioPinList = ioPinLists.get(name);
 
 		System.out.println("# Converting image");
 		int[][] pixels = convertTo2DWithoutUsingGetRGB(image);
@@ -228,7 +301,11 @@ public class Process {
 		double[] window = new double[] { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 };
 		double[] reference = new Stats(window).normalize();
 
-		Cell[][] cells = initializeGrid(w, h, pixels, reference);
+		Cell[][] cells = initGrid(w, h, pixels, reference);
+		
+		// Make a copy of the original grid so it can be restored later
+		// Cell[][] originalGrid = cloneCells(cells);
+		
 		optimizeGrid(cells, pixels, CELL_SIZE, SEARCH_THRESH, reference, GRID_DELTA, GRID_RECENTER);
 
 		System.out.println("# Matching image");
@@ -243,12 +320,12 @@ public class Process {
 		// dumpXGraph("y grid", yGrid, h, gridSize);
 
 		// Overlay pins onto logical cell map
-		addPins(cells, blockCellX, blockCellY);
+		addPins(name, cells, blockCell, ioPinList);
 
 		for (int xi = startCell.getX(); xi <= endCell.getX(); xi++) {
 			System.out.println((xi - startCell.getX()) + " / " + (endCell.getX() - startCell.getX()));
 			for (int yi = startCell.getY(); yi <= endCell.getY(); yi++) {
-				matcher.match(pixels, xi, yi, image, cells);
+				matcher.match(cells[yi][xi], pixels);
 			}
 		}
 
@@ -297,6 +374,10 @@ public class Process {
 		ret = drcBridge(cellsOut8, null);
 		System.out.println("# Final DRC Bridge Count = " + ret);
 
+		// Restore the original grid so the output looks aligned
+		// Sometimes useful to comment this out for debugging
+		// copyGrid(originalGrid, cellsOut8);
+		
 		// Results onto output image
 		System.out.println("# Annotating PNG");
 		annotateImage(image, cellsOut8);
@@ -306,7 +387,7 @@ public class Process {
 
 	}
 
-	private Cell[][] initializeGrid(int w, int h, int[][] pixels, double[] reference) {
+	private Cell[][] initGrid(int w, int h, int[][] pixels, double[] reference) {
 		int[] xTotals = new int[w];
 		int[] yTotals = new int[h];
 		gridHistogram(pixels, 0, 0, w, h, xTotals, yTotals);
@@ -327,6 +408,18 @@ public class Process {
 		}
 		return cells;
 	}
+	
+	@SuppressWarnings("unused")
+	private void copyGrid(Cell[][] from, Cell[][] to) {
+		for (int yi = 0; yi < from.length; yi++) {
+			for (int xi = 0; xi < from[yi].length; xi++) {
+				to[yi][xi].setX1(from[yi][xi].getX1());
+				to[yi][xi].setX2(from[yi][xi].getX2());
+				to[yi][xi].setY1(from[yi][xi].getY1());
+				to[yi][xi].setY2(from[yi][xi].getY2());
+			}			
+		}
+	}
 
 	private Cell[][] initCells(int w, int h) {
 		Cell[][] cells = new Cell[h][w];
@@ -336,6 +429,17 @@ public class Process {
 			}
 		}
 		return cells;
+	}
+	
+	@SuppressWarnings("unused")
+	private Cell[][] cloneCells(Cell[][] from) {
+		Cell[][] to = new Cell[from.length][from[0].length];
+		for (int yi = 0; yi < from.length; yi++) {
+			for (int xi = 0; xi < from[yi].length; xi++) {
+				to[yi][xi] = new Cell(from[yi][xi]);
+			}
+		}
+		return to;
 	}
 	
 	// Optimize the grid by correlating locally over a smaller window (e.g. 16x16 cells)
@@ -538,54 +642,6 @@ public class Process {
 					cell.setLeft();
 					cell.setTop();
 					break;
-				case HPAD_GND_1:
-					cell.setRight();
-					cell.setBottom();
-					break;
-				case HPAD_GND_2:
-					cell.setRight();
-					cell.setLeft();
-					break;
-				case HPAD_GND_3:
-					cell.setLeft();
-					cell.setBottom();
-					break;
-				case HPAD_GND_4:
-					cell.setRight();
-					cell.setTop();
-					break;
-				case HPAD_GND_5:
-					cell.setRight();
-					cell.setLeft();
-					break;
-				case HPAD_GND_6:
-					cell.setLeft();
-					cell.setTop();
-					break;
-				case VPAD_GND_1:
-					cell.setRight();
-					cell.setBottom();
-					break;
-				case VPAD_GND_2:
-					cell.setTop();
-					cell.setBottom();
-					break;
-				case VPAD_GND_3:
-					cell.setRight();
-					cell.setTop();
-					break;
-				case VPAD_GND_4:
-					cell.setLeft();
-					cell.setBottom();
-					break;
-				case VPAD_GND_5:
-					cell.setTop();
-					cell.setBottom();
-					break;
-				case VPAD_GND_6:
-					cell.setLeft();
-					cell.setTop();
-					break;
 				default:
 				}
 
@@ -661,48 +717,63 @@ public class Process {
 		}
 	}
 
-	private void addPins(Cell[][] cells, int blockXOffset, int blockYOffset) {
+	private void addPins(String name, Cell[][] cells, XY blockOffset,  Pin[] ioPinList) {
 		for (int cellXi = 0; cellXi < 10; cellXi++) {
 			for (int cellYi = 0; cellYi < 11; cellYi++) {
 				for (Pin pin : cellPins) {
-					int cellX = blockXOffset + cellXi * 15;
-					int cellY = blockYOffset + cellYi * 15;
+					int cellX = blockOffset.getX() + cellXi * 15;
+					int cellY = blockOffset.getY() + cellYi * 15;
 					cells[cellY + pin.getY()][cellX + pin.getX()].setPin(pin);
 				}
 			}
 		}
-		// TODO Need to generalise this
-		for (int x : generateSequence(9, 10)) {
-			cells[175][x].setPin(new Pin(0, 0, PinType.NORMAL));
+
+		boolean addLeft = name.charAt(0) != '0';
+		boolean addRight = name.charAt(0) != '2';
+		boolean addTop = name.charAt(1) != '0';
+		boolean addBottom = name.charAt(1) != '2';
+		
+		int left = 2;
+		int top = 2;
+		int right = cells[0].length - 3;
+		int bottom = cells.length - 3;
+		
+		for (int x : generateSequence(blockOffset.getX() + 1, 10)) {
+			if (addTop) {
+				cells[top][x].setPin(new Pin(0, 0, PinType.NORMAL));
+			}
+			if (addBottom) {
+				cells[bottom][x].setPin(new Pin(0, 0, PinType.NORMAL));
+			}
 		}
-		for (int y : generateSequence(9, 11)) {
-			cells[y][160].setPin(new Pin(0, 0, PinType.NORMAL));
+
+		for (int y : generateSequence(blockOffset.getY() + 1, 11)) {
+			if (addLeft) {
+				cells[y][left].setPin(new Pin(0, 0, PinType.NORMAL));
+			}
+			if (addRight) {
+				cells[y][right].setPin(new Pin(0, 0, PinType.NORMAL));
+			}
 		}
-		for (int i = 0; i < 5; i++) {
-			addPeriperalCell(cells, horPeripheralPins, 11 + 31 * i, 0, false, false);
-		}
-		for (int i = 0; i < 6; i++) {
-			addPeriperalCell(cells, verPeripheralPins, 0, 3 + 31 * i, true, false);
-		}
-		for (int i = 0; i < 6; i++) {
-			cells[2][4 + 31 * i].setPin(new Pin(0, 0, PinType.NORMAL));
-		}
-		for (int i = 0; i < 5; i++) {
-			cells[29 + 31 * i][2].setPin(new Pin(0, 0, PinType.NORMAL));
+		
+		//		for (int i = 0; i < 5; i++) {
+		//			addPeriperalCell(cells, horPeripheralPins, 11 + 31 * i, 0, false, false);
+		//		}
+		//		for (int i = 0; i < 6; i++) {
+		//			addPeriperalCell(cells, verPeripheralPins, 0, 3 + 31 * i, true, false);
+		//		}
+		//		for (int i = 0; i < 6; i++) {
+		//			cells[2][4 + 31 * i].setPin(new Pin(0, 0, PinType.NORMAL));
+		//		}
+		//		for (int i = 0; i < 5; i++) {
+		//			cells[29 + 31 * i][2].setPin(new Pin(0, 0, PinType.NORMAL));
+		//		}
+		
+		for (Pin pin : ioPinList) {
+			cells[pin.getY()][pin.getX()].setPin(pin);
 		}
 	}
 
-	private void addPeriperalCell(Cell[][] cells, Pin[] pins, int xi, int yi, boolean rotated, boolean mirrored) {
-		for (Pin pin : pins) {
-			int x = rotated ? pin.getY() : pin.getX();
-			int y = rotated ? pin.getX() : pin.getY();
-			if (mirrored) {
-				x = -x;
-				y = -y;
-			}
-			cells[yi + y][xi + x].setPin(pin);
-		}
-	}
 	private int[] generateSequence(int offset, int n) {
 		int[] sequence = new int[n * 6];
 		int i = 0;
@@ -937,27 +1008,25 @@ public class Process {
 				if (cellsOut != null) {
 					cellsOut[y][x] = cell1;
 				}
-				if (cell1.getType().ordinal() < PinType.HPAD_GND_1.ordinal()) {
-					int c1 = cell1.getConnections();
-					// Check for a bridge between two vertical traces
-					if (x < w - 1) {
-						Cell cell2 = cellsIn[y][x + 1];
-						int c2 = cell2.getConnections();
-						if ((c1 == 7 || c1 == 15) && (c2 == 13 || c2 == 15)) {
-							cell1.setBridgeFail(true);
-							cell2.setBridgeFail(true);
-							failCount++;
-						}
+				int c1 = cell1.getConnections();
+				// Check for a bridge between two vertical traces
+				if (x < w - 1) {
+					Cell cell2 = cellsIn[y][x + 1];
+					int c2 = cell2.getConnections();
+					if ((c1 == 7 || c1 == 15) && (c2 == 13 || c2 == 15)) {
+						cell1.setBridgeFail(true);
+						cell2.setBridgeFail(true);
+						failCount++;
 					}
-					// Check for a bridge between two vertical traces
-					if (y < h - 1) {
-						Cell cell2 = cellsIn[y + 1][x];
-						int c2 = cell2.getConnections();
-						if ((c1 == 14 || c1 == 15) && (c2 == 11 || c2 == 15)) {
-							cell1.setBridgeFail(true);
-							cell2.setBridgeFail(true);
-							failCount++;
-						}
+				}
+				// Check for a bridge between two vertical traces
+				if (y < h - 1) {
+					Cell cell2 = cellsIn[y + 1][x];
+					int c2 = cell2.getConnections();
+					if ((c1 == 14 || c1 == 15) && (c2 == 11 || c2 == 15)) {
+						cell1.setBridgeFail(true);
+						cell2.setBridgeFail(true);
+						failCount++;
 					}
 				}
 			}

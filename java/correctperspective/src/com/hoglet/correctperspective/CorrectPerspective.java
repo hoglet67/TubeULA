@@ -3,8 +3,11 @@ package com.hoglet.correctperspective;
 import java.awt.RenderingHints;
 import java.awt.image.RenderedImage;
 import java.awt.image.renderable.ParameterBlock;
+import java.io.File;
 import java.io.FileOutputStream;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriter;
@@ -15,12 +18,39 @@ import javax.media.jai.WarpPerspective;
 
 public class CorrectPerspective {
 
-	// /**
-	// * this gets rid of exception for not using native acceleration
-	// */
-	// static {
-	// System.setProperty("com.sun.media.jai.disableMediaLib", "true");
-	// }
+	private static Map<String, Double[]> xMap = new HashMap<String, Double[]>();
+	private static Map<String, Double[]> yMap = new HashMap<String, Double[]>();
+	
+	static {
+		
+		xMap.put("00", new Double[] { 1862.0, 8256.0, 8216.0, 1821.0 });
+		yMap.put("00", new Double[] { 1887.0, 1931.0, 8876.0, 8828.0 });
+		
+		xMap.put("10", new Double[] {  483.0, 6795.0, 6757.0,  442.0 });
+		yMap.put("10", new Double[] { 1926.0, 1967.0, 8921.0, 8878.0 });
+
+		xMap.put("20", new Double[] {  551.0, 6949.0, 6907.0,  511.0 });
+		yMap.put("20", new Double[] { 1967.0, 2008.0, 8959.0, 8922.0 });
+
+		xMap.put("01", new Double[] { 1820.0, 8215.0, 8177.0, 1783.0 });
+		yMap.put("01", new Double[] {  296.0,  347.0, 7216.0, 7173.0 });
+
+		xMap.put("11", new Double[] {  442.0, 6753.0, 6716.0,  405.0 });
+		yMap.put("11", new Double[] {  348.0,  393.0, 7255.0, 7216.0 });
+
+		xMap.put("21", new Double[] {  508.0, 6906.0, 6867.0,  470.0 });
+		yMap.put("21", new Double[] {  391.0,  428.0, 7289.0, 7257.0 });
+
+		xMap.put("02", new Double[] { 1783.0, 8176.0, 8138.0, 1745.0 });
+		yMap.put("02", new Double[] {  264.0,  316.0, 7263.0, 7217.0 });
+
+		xMap.put("12", new Double[] {  404.0, 6719.0, 6682.0,  366.0 });
+		yMap.put("12", new Double[] {  316.0,  354.0, 7301.0, 7262.0 });
+
+		xMap.put("22", new Double[] {  471.0, 6866.0, 6832.0,  434.0 });
+		yMap.put("22", new Double[] {  354.0,  386.0, 7331.0, 7302.0 });
+
+	}
 
 	public static final void main(String args[]) {
 
@@ -32,8 +62,28 @@ public class CorrectPerspective {
 				System.out.println(jiioWriter.getClass().getName());
 			} while (iter.hasNext());
 
-			String src = "../../attempt6/xxx_00.png";
-			String dst = "../../attempt6/yyy_00.png";
+			if (args.length != 2) {
+				System.err.println("usage: java -jar ulamangling.jar <Src PNG> <Dst PNG> ");
+				System.exit(1);
+			}
+			File srcFile = new File(args[0]);
+			if (!srcFile.exists()) {
+				System.err.println("Src File: " + srcFile + " does not exist");
+				System.exit(1);
+			}
+			if (!srcFile.isFile()) {
+				System.err.println("Src File: " + srcFile + " is not a file");
+				System.exit(1);
+			}
+			File dstFile = new File(args[1]);
+			
+			String name = srcFile.getName();
+			name = name.substring(name.indexOf('_') + 1, name.lastIndexOf('.'));
+			System.out.println("# name = " + name);
+			
+			
+			String src = srcFile.getAbsolutePath();
+			String dst = dstFile.getAbsolutePath();
 
 			System.out.println("Reading image");
 			// BufferedImage image = ImageIO.read(src);
@@ -42,23 +92,23 @@ public class CorrectPerspective {
 			RenderedOp reader = JAI.create("fileload", src);
 			RenderedImage image = reader.createInstance();
 
-
-			// double xp[] = new double[] { 2090, 8021, 8021, 2090 };
-			// double yp[] = new double[] { 2111, 2111, 8884, 8884 };
-
-			// values used for attempt3
-			// double x[] = new double[] { 2090, 8060, 8021, 2051 };
-			// double y[] = new double[] { 2111, 2151, 8884, 8838 };
-			// double xp[] = new double[] { 2090, 8021, 8021, 2090 };
-			// double yp[] = new double[] { 2151, 2151, 8838, 8838};
-
-			double x[] = new double[] { 1862, 8256, 8216, 1821 };
-			double y[] = new double[] { 1887, 1931, 8876, 8828 };
+			Double x[] = xMap.get(name);
+			Double y[] = yMap.get(name);
 
 			int origin = 0;
 			int cellsize = 40;
-			int w = 8 + 10 * 15 + 5;
-			int h = 8 + 11 * 15 + 5;
+			int w = 10 * 15;
+			int h = 11 * 15;
+			if (name.charAt(0) == '1') {
+				w += 11;
+			} else {
+				w += 13;
+			}
+			if (name.charAt(1) == '1') {
+				h += 11;
+			} else {
+				h += 13;
+			}
 			double xp[] = new double[] { origin, origin + w * cellsize, origin + w * cellsize, origin };
 			double yp[] = new double[] { origin, origin, origin + h * cellsize, origin + h * cellsize };
 

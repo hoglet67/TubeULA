@@ -1,6 +1,5 @@
 package com.hoglet.ulamangling;
 
-import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,6 +12,8 @@ public class CellMatcher {
 	private int l;
 	private int csEmitter;
 	private int delta;
+	private int blankThreshold;
+	private int connectThreshold;
 
 	private List<Pattern> patterns = new ArrayList<Pattern>();
 	private List<Pattern> patternsPlusPins = new ArrayList<Pattern>();
@@ -22,12 +23,14 @@ public class CellMatcher {
 		INIT, ZERO, HALF, ONE,
 	};
 
-	public CellMatcher(int dimension, int line, int corner, int csEmitter, int delta) {
+	public CellMatcher(int dimension, int line, int corner, int csEmitter, int delta, int blankThreshold, int connectThreshold) {
 		this.d = dimension;
 		this.l = line;
 		this.c = corner;
 		this.csEmitter = csEmitter;
 		this.delta = delta;
+		this.blankThreshold = blankThreshold;
+		this.connectThreshold = connectThreshold;
 		initializePatterns();
 		dumpPatterns(patterns);
 		dumpPatterns(patternsPlusPins);
@@ -244,19 +247,77 @@ public class CellMatcher {
 		}
 	}
 
-	public void match(int[][] pixels, int xi, int yi, BufferedImage image, Cell[][] cells) {
+	
+	public void edgeMatch(Cell cell, int[][] pixels) {
 
-		if (cells[yi][xi].getType() == PinType.CS_EMITTER_2) {
+		int x1 = cell.getX1();
+		int x2 = cell.getX2();
+		int y1 = cell.getY1();
+		int y2 = cell.getY2();
+		int top = 0;
+		int left = 0;
+		int right = 0;
+		int bottom = 0;
+
+		int total = 0;
+		for (int x = x1; x <= x2; x++) {
+			for (int y = y1; y <= y2; y++) {
+				if ((pixels[y][x] & 0xff0000) < 128) {
+					total++;
+				}
+			}
+		}
+
+		if (total < blankThreshold) {
+			return;
+		}
+
+		for (int line = -1; line <= 1; line++) {
+			for (int x = x1; x <= x2; x++) {
+				if ((pixels[y1 + line][x] & 0xff0000) < 128) {
+					top++;
+				}
+				if ((pixels[y2 - line][x] & 0xff0000) < 128) {
+					bottom++;
+				}
+			}
+			for (int y = y1; y <= y2; y++) {
+				if ((pixels[y][x1 + line] & 0xff0000) < 128) {
+					left++;
+				}
+				if ((pixels[y][x2 - line] & 0xff0000) < 128) {
+					right++;
+				}
+			}
+		}
+		
+		if (top > connectThreshold) {
+			cell.setTop();
+		}
+		if (bottom > connectThreshold) {
+			cell.setBottom();
+		}
+		if (left > connectThreshold) {
+			cell.setLeft();
+		}
+		if (right > connectThreshold) {
+			cell.setRight();
+		}
+	}
+			
+	public void match(Cell cell, int[][] pixels) {
+
+		if (cell.getType() == PinType.CS_EMITTER_2) {
 			return;
 		}
 
 		int h = pixels.length;
 		int w = pixels[0].length;
 		
-		int x1 = cells[yi][xi].getX1();
-		int x2 = cells[yi][xi].getX2();
-		int y1 = cells[yi][xi].getY1();
-		int y2 = cells[yi][xi].getY2();
+		int x1 = cell.getX1();
+		int x2 = cell.getX2();
+		int y1 = cell.getY1();
+		int y2 = cell.getY2();
 		
 		// System.out.println("x1=" + x1 + "; y1=" + y1 + "; x2=" + x2 + "; y2=" + y2);
 		
@@ -267,10 +328,10 @@ public class CellMatcher {
 
 		// If we know there is a pin in this cell, the use set of patterns that include pins
 		// Note: We could be smarter here, because not all pins in the plot were blue
-		boolean pinPresent = cells[yi][xi].getType() != PinType.NONE;
+		boolean pinPresent = cell.getType() != PinType.NONE;
 		
 		List<Pattern> matchAgainst;
-		if (cells[yi][xi].getType() == PinType.CS_EMITTER_5) {
+		if (cell.getType() == PinType.CS_EMITTER_5) {
 			matchAgainst = patternsCsEmitter5;
 		} else if (pinPresent) {
 			matchAgainst = patternsPlusPins;
@@ -288,14 +349,14 @@ public class CellMatcher {
 			if (dxMin + x1 < 0) {
 				dxMin = x1;
 			}
-			if (dxMax + x2 > image.getWidth()) {
-				dxMax = image.getWidth() - x2;
+			if (dxMax + x2 > w) {
+				dxMax = w - x2;
 			}
 			if (dyMin + y1 < 0) {
 				dyMin = y1;
 			}
-			if (dyMax + y2 > image.getHeight()) {
-				dyMax = image.getHeight() - y2;
+			if (dyMax + y2 > h) {
+				dyMax = h - y2;
 			}
 
 			// System.out.println("dxmin=" + dxMin + "; dymin=" + dyMin + "; dxmax" + dxMax + "; dymax=" + dyMax);
@@ -368,7 +429,7 @@ public class CellMatcher {
 			System.out.println("Matched pattern " + bestPattern);
 		}
 
-		cells[yi][xi].setConnections(bestPattern.getConnections());
+		cell.setConnections(bestPattern.getConnections());
 
 		return;
 
