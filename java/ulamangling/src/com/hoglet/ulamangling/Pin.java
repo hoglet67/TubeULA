@@ -17,6 +17,10 @@ public class Pin extends XY {
 		NONE,
 		NORMAL,
 		IO,
+		LINK_L,
+		LINK_R,
+		LINK_T,
+		LINK_B,
 		CS_EMITTER_1,
 		CS_EMITTER_2,
 		CS_EMITTER_3,
@@ -66,6 +70,10 @@ public class Pin extends XY {
 			break;
 		case NORMAL:
 		case IO:
+		case LINK_L:
+		case LINK_R:
+		case LINK_T:
+		case LINK_B:
 		case CS_BASE_1:
 		case CS_BASE_3:
 			rectangle(image, px + w / 4, py + h / 4, w / 2, h / 2, rgb);
@@ -139,7 +147,44 @@ public class Pin extends XY {
 	public void setName(String name) {
 		this.name = name;
 	}
-
+	
+	public String toString() {
+		switch (type) {
+		case NORMAL:
+			return "X";
+		case IO:
+			return "I";
+		case LINK_L:
+			return "<";
+		case LINK_R:
+			return ">";
+		case LINK_T:
+			return "^";
+		case LINK_B:
+			return "V";
+		case CS_BASE_1:
+		case CS_BASE_2:
+		case CS_BASE_3:
+			return "B";
+		case CS_EMITTER_1:
+		case CS_EMITTER_2:
+		case CS_EMITTER_3:
+		case CS_EMITTER_4:
+		case CS_EMITTER_5:
+		case CS_EMITTER_6:
+			return "E";
+		case CS_COLLECTOR_1:
+		case CS_COLLECTOR_2:
+		case CS_COLLECTOR_3:
+			return "C";
+		case CS_GND_1:
+		case CS_GND_2:
+		case CS_GND_3:
+			return "O";
+		default:
+			return " ";
+		}
+	}
 	
 	
 

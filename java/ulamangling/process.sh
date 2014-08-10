@@ -5,7 +5,7 @@ ant
 
 for block in 00 10 20 01 11 21 02 12 22
 do
-java -jar ulamangling.jar ../../attempt6/zzz_${block}.png  test_${block}.png 2>&1 | tee log_${block}.log
+java -jar ulamangling.jar extract ../../attempt6/zzz_${block}.png  test_${block}.png 2>&1 | tee log_${block}.log
 done
 
 

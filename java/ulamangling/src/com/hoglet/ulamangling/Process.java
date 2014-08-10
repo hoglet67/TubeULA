@@ -4,6 +4,8 @@ import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -15,10 +17,18 @@ import java.util.TreeMap;
 
 import javax.imageio.ImageIO;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.hoglet.ulamangling.Pin.PinType;
 
 public class Process {
 
+	private static final int NET_VS  = 99991;
+	private static final int NET_GND = 99990;
+	
+	// Whether to output annotated PNG
+	public static final boolean OUTPUT_ANNOTATED_PNG = true;
+	
 	// Nominal cell size in pixels
 	public static final int CELL_SIZE = 40;
 
@@ -53,6 +63,9 @@ public class Process {
 
 	// The list of IO Pins
 	public static Map<String, Pin[]> ioPinLists = new HashMap<String, Pin[]>();
+
+	public static Map<String, Cell[]> overrideLists = new HashMap<String, Cell[]>();
+
 	
 	// Attempt 6
 	// These values need to be manually extracted for each image
@@ -80,12 +93,16 @@ public class Process {
 				new Pin(138, 5, "PDOEA"),
 				new Pin(151, 5, "PDOEB")
 		});
-		
+		overrideLists.put("00", new Cell[] {
+		});
+				
 		startCells.put("10", new XY(0, 5));
 		blockCells.put("10", new XY(6, 8));
 		endCells.put("10", new XY(160, 177));
 		ioPinLists.put("10", new Pin[] {
 				new Pin(160, 5, "HRST")
+		});
+		overrideLists.put("10", new Cell[] {
 		});
 
 		startCells.put("20", new XY(0, 5));
@@ -115,6 +132,9 @@ public class Process {
 				new Pin(158, 177, "HDOE"),
 				new Pin(24, 5, "HDOEA")
 		});
+		overrideLists.put("20", new Cell[] {
+		});
+
 		
 		startCells.put("01", new XY(5, 0));
 		blockCells.put("01", new XY(8, 6));
@@ -131,12 +151,18 @@ public class Process {
 				new Pin(5, 169, "PDOE"),
 				new Pin(5, 174, "PDOE")
 		});
+		overrideLists.put("01", new Cell[] {
+		});
+
 
 		startCells.put("11", new XY(0, 0));
 		blockCells.put("11", new XY(6, 6));
 		endCells.put("11", new XY(160, 175));
 		ioPinLists.put("11", new Pin[] {
 		});
+		overrideLists.put("11", new Cell[] {
+		});
+
 		
 		startCells.put("21", new XY(0, 0));
 		blockCells.put("21", new XY(6, 6));
@@ -151,6 +177,9 @@ public class Process {
 				new Pin(158, 45, "HDOE"),
 				new Pin(158, 161, "HDOE")
 		});
+		overrideLists.put("21", new Cell[] {
+		});
+
 		
 		startCells.put("02", new XY(5, 0));
 		blockCells.put("02", new XY(8, 6));
@@ -170,6 +199,9 @@ public class Process {
 				new Pin(5, 167, "PDOE"),
 				new Pin(5, 172, "PDOE")
 		});
+		overrideLists.put("02", new Cell[] {
+		});
+
 
 		startCells.put("12", new XY(0, 0));
 		blockCells.put("12", new XY(6, 6));
@@ -178,6 +210,9 @@ public class Process {
 				new Pin(153, 172, "HIRQ"),
 				new Pin(160, 172, "PNMI")
 		});
+		overrideLists.put("12", new Cell[] {
+		});
+
 
 		startCells.put("22", new XY(0, 0));
 		blockCells.put("22", new XY(6, 6));
@@ -199,6 +234,9 @@ public class Process {
 				new Pin(158, 167, "HDOE"),
 				new Pin(157, 172, "HDOE")
 		});
+		overrideLists.put("22", new Cell[] {
+		});
+
 	}
 
 	public static Pin[] cellPins = new Pin[] { new Pin(4, 1, PinType.NORMAL), new Pin(6, 1, PinType.NORMAL),
@@ -279,7 +317,7 @@ public class Process {
 		return result;
 	}
 
-	public void convert(String name, File srcFile, File dstFile) throws IOException {
+	public void extract(String name, File srcFile, File dstFile) throws IOException {
 
 		CellMatcher matcher = new CellMatcher(CELL_SIZE + 1, 4, 5, 15, MATCH_DELTA, BLANK_THRESH, CONNECT_THRESH);
 
@@ -293,6 +331,7 @@ public class Process {
 		XY startCell = startCells.get(name);
 		XY endCell = endCells.get(name);
 		Pin[] ioPinList = ioPinLists.get(name);
+		Cell[] overrideList = overrideLists.get(name);
 
 		System.out.println("# Converting image");
 		int[][] pixels = convertTo2DWithoutUsingGetRGB(image);
@@ -329,7 +368,9 @@ public class Process {
 			}
 		}
 
-		fixKnownPatterns(cells);
+		fixKnownPatterns(cells, overrideList);
+
+		fixDodgyVSSConnection(cells, blockCell);
 
 		int ret;
 
@@ -377,16 +418,90 @@ public class Process {
 		// Restore the original grid so the output looks aligned
 		// Sometimes useful to comment this out for debugging
 		// copyGrid(originalGrid, cellsOut8);
+
+		System.out.println("# Writing Json");
+        GsonBuilder builder = new GsonBuilder();
+        builder.setPrettyPrinting().serializeNulls();
+        Gson gson = builder.create();
+        FileWriter writer = new FileWriter(new File("cells_"+ name + ".json"));
+        gson.toJson(cellsOut8, writer);
+        writer.close();
+         
+
 		
-		// Results onto output image
-		System.out.println("# Annotating PNG");
-		annotateImage(image, cellsOut8);
-
-		System.out.println("# Writing PNG");
-		ImageIO.write(image, "png", dstFile);
-
+		
+		if (OUTPUT_ANNOTATED_PNG) {
+			System.out.println("# Annotating PNG");
+			annotateImage(image, cellsOut8);
+			System.out.println("# Writing PNG");
+			ImageIO.write(image, "png", dstFile);
+		}
 	}
 
+	private void traceNets(Cell[][] cells) {
+		int net = 1;
+		for (int y = 0; y < cells.length; y++) {
+			for (int x = 0; x < cells[y].length; x++) {
+				Cell cell = cells[y][x];
+				if (cell.getNet() == 0 && cell.getType() != null && cell.getType() != PinType.NONE && cell.getConnections() > 0) {
+					traceNet(cells, x, y, net++);
+				}
+			}
+		}
+	}
+
+	private void traceNet(Cell[][] cells, int x, int y, int net) {
+		Cell cell = cells[y][x];
+		if (cell.getNet() > 0) {
+			return;
+		}
+		cell.setNet(net);
+		if (cell.isLeft()) {
+			traceNet(cells, x - 1, y, net);
+		}
+		if (cell.isRight()) {
+			traceNet(cells, x + 1, y, net);
+		}
+		if (cell.isTop()) {
+			traceNet(cells, x, y - 1, net);
+		}
+		if (cell.isBottom()) {
+			traceNet(cells, x, y + 1, net);
+		}
+	}
+	
+	private void dumpCells(Cell[][] cells, Map<Integer, String> nameMap, boolean nets) {
+		for (int y = 0; y < cells.length; y++) {
+			for (int x = 0; x < cells[y].length; x++) {
+				Cell cell = cells[y][x];
+				Pin pin = cell.getPin();
+				if (pin != null) {
+					System.out.print(pin);
+				} else {
+					System.out.print(" ");
+				}
+				if (nets) {
+					int net = cell.getNet();
+					if (cell.getNet() > 0) {
+						String name = nameMap.get(net);
+						if (name == null) {
+							name = "" + net;
+						}
+						while (name.length() < 6) {
+							name += " ";
+						}
+						System.out.print(name);
+					} else {
+						System.out.print("      ");
+					}
+				}
+			}
+			System.out.println();
+		}
+	}
+
+	
+	
 	private Cell[][] initGrid(int w, int h, int[][] pixels, double[] reference) {
 		int[] xTotals = new int[w];
 		int[] yTotals = new int[h];
@@ -564,7 +679,29 @@ public class Process {
 		return start;
 	}
 
-	private void fixKnownPatterns(Cell[][] cells) {
+	private void fixDodgyVSSConnection(Cell[][] cells, XY blockCell) {
+		for (int xi = 0; xi < 10; xi++) {
+			for (int yi = 0; yi < 11; yi++) {
+				int cellx = blockCell.getX() + 15 * xi; 
+				int celly = blockCell.getY() + 15 * yi;
+				// The connection between RCS and RLB has a habbit of shorting
+				// this should only be connected to VS....
+				if (cells[celly + 12][cellx + 11].isBottom() && cells[celly + 13][cellx + 12].isLeft()) {
+					if (cells[celly + 13][cellx + 11].isBottom()) {
+						cells[celly + 13][cellx + 11].clearBottom();
+						cells[celly + 13][cellx + 11].setHighlight(true);
+					}
+				}
+			}
+		}
+	}
+		
+		
+
+	private void fixKnownPatterns(Cell[][] cells, Cell[] overrideList) {
+		for (Cell override : overrideList) {
+			cells[override.getPin().getY()][override.getPin().getX()].setConnections(override.getConnections());
+		}
 		for (int yi = 0; yi < cells.length; yi++) {
 			for (int xi = 0; xi < cells[yi].length; xi++) {
 
@@ -740,19 +877,19 @@ public class Process {
 		
 		for (int x : generateSequence(blockOffset.getX() + 1, 10)) {
 			if (addTop) {
-				cells[top][x].setPin(new Pin(0, 0, PinType.NORMAL));
+				cells[top][x].setPin(new Pin(0, 0, PinType.LINK_T));
 			}
 			if (addBottom) {
-				cells[bottom][x].setPin(new Pin(0, 0, PinType.NORMAL));
+				cells[bottom][x].setPin(new Pin(0, 0, PinType.LINK_B));
 			}
 		}
 
 		for (int y : generateSequence(blockOffset.getY() + 1, 11)) {
 			if (addLeft) {
-				cells[y][left].setPin(new Pin(0, 0, PinType.NORMAL));
+				cells[y][left].setPin(new Pin(0, 0, PinType.LINK_L));
 			}
 			if (addRight) {
-				cells[y][right].setPin(new Pin(0, 0, PinType.NORMAL));
+				cells[y][right].setPin(new Pin(0, 0, PinType.LINK_R));
 			}
 		}
 		
@@ -891,30 +1028,410 @@ public class Process {
 			}
 		}
 	}
+	
+	public void netlist(String blockBase) throws IOException {
+		
+		// Read in all 9 blocks
+		
+		List<Cell[][]> blocks = new ArrayList<Cell[][]>();
+		
+		blocks.add(parseBlock(new File(blockBase + "_00.json")));
+		blocks.add(parseBlock(new File(blockBase + "_10.json")));
+		blocks.add(parseBlock(new File(blockBase + "_20.json")));
+		blocks.add(parseBlock(new File(blockBase + "_01.json")));
+		blocks.add(parseBlock(new File(blockBase + "_11.json")));
+		blocks.add(parseBlock(new File(blockBase + "_21.json")));
+		blocks.add(parseBlock(new File(blockBase + "_02.json")));
+		blocks.add(parseBlock(new File(blockBase + "_12.json")));
+		blocks.add(parseBlock(new File(blockBase + "_22.json")));
+
+
+		// Extract the width/heights of the blocks
+		int w0 = blocks.get(0)[0].length;
+		int w1 = blocks.get(1)[0].length;;
+		int w2 = blocks.get(2)[0].length;;
+		int h0 = blocks.get(0).length;
+		int h1 = blocks.get(3).length;
+		int h2 = blocks.get(6).length;
+		int w = w0 + w1 + w2;
+		int h = h0 + h1 + h2;
+		
+		// Calculate the top left corner of each block in the larger array
+		List<XY> blockOrigins = new ArrayList<XY>();
+		blockOrigins.add(new XY(0, 0));
+		blockOrigins.add(new XY(w0, 0));
+		blockOrigins.add(new XY(w0 + w1,0));
+		blockOrigins.add(new XY(0, h0));
+		blockOrigins.add(new XY(w0, h0));
+		blockOrigins.add(new XY(w0 + w1,h0));
+		blockOrigins.add(new XY(0,h0 + h1));
+		blockOrigins.add(new XY(w0, h0 + h1));
+		blockOrigins.add(new XY(w0 + w1, h0 + h1));
+		
+		// Calculate the relative location of top left cell in each block
+		List<XY> cellOffsets = new ArrayList<XY>();
+		for (char y = '0' ; y <= '2'; y++) {
+			for (char x = '0' ; x <= '2'; x++) {
+				String name = "" + x + y;
+				cellOffsets.add(blockCells.get(name));
+			}
+		}
+
+		// Shallow copy the blocks to a single large array
+		// This allows the cells to still be accessed via the original blocks
+		Cell[][] array = new Cell[h][w];
+		for (int i = 0; i < blocks.size(); i++) {
+			copyBlock(blocks.get(i), array, blockOrigins.get(i).getX(), blockOrigins.get(i).getY());
+		}
+
+		
+		labelNetsV1(blocks, blockOrigins, cellOffsets, array, w, h);
+		
+		Map<Integer, String> nameMap = buildNameMap(array, w, h);
+		
+		dumpCells(array, nameMap, true);
+
+		// Output the components in each block
+		generateNetlist(blocks, blockOrigins, cellOffsets, array);
+		
+	}
+
+	private Cell[][] parseBlock(File blockFile) throws IOException {
+		System.out.println("Reading " + blockFile);
+		GsonBuilder builder = new GsonBuilder();
+		builder.setPrettyPrinting().serializeNulls();
+		Gson gson = builder.create();
+		FileReader reader = new FileReader(blockFile);
+		Cell[][] block = gson.fromJson(reader, Cell[][].class);
+		reader.close();
+		return block;
+	}
+	
+	private void copyBlock(Cell[][] from, Cell[][] to, int x0, int y0) {
+		for (int y = 0; y < from.length; y++) {
+			for (int x = 0; x < from[y].length; x++) {
+				to[y0 + y][x0 + x] = from[y][x];
+			}
+		}
+	}
+
+	private Map<Integer, String> buildNameMap(Cell[][] array, int w, int h) {
+		Map<Integer, String> nameMap = new HashMap<Integer, String>();
+		nameMap.put(NET_GND, "GND");
+		nameMap.put(NET_VS, "VS");
+		for (int y = 0; y < h; y++) {
+			for (int x = 0; x < w; x++) {
+				Cell cell = array[y][x];
+				if (cell.getType() == PinType.IO) {
+					String name = cell.getPin().getName();
+					if (nameMap.containsKey(cell.getNet())) {
+						String existingName = nameMap.get(cell.getNet());
+						if (!existingName.equals(name)) {
+							System.err.println("Name conflict: " + name + " and " + existingName);
+						}
+					} else {
+						nameMap.put(cell.getNet(), name);
+					}
+				}
+			}
+		}
+		return nameMap;
+	}
+	
+	private void generateNetlist(List<Cell[][]> blocks, List<XY> blockOrigins, List<XY> cellOffsets, Cell[][] array) {
+		for (int i = 0; i < blocks.size(); i++) {
+			System.out.println("Outputting components in block " + i);
+			XY blockOrigin = blockOrigins.get(i);
+			XY cellOffset = cellOffsets.get(i);
+			System.out.println("Block origin = " + blockOrigin);
+			System.out.println("Cell Offset = " + cellOffset);
+			for (int xi = 0; xi < 10; xi++) {
+				for (int yi = 0; yi < 11; yi++) {
+					int cellx = blockOrigin.getX() + xi * 15 + cellOffset.getX();
+					int celly = blockOrigin.getY() + yi * 15 + cellOffset.getY();
+
+					String id = "B" + (i % 3) + (i / 3) + "_C" + Integer.toHexString(xi) + Integer.toHexString(yi) + "_";
+					
+					// Emitter, Base, Collector
+					outputComponent(array, cellx, celly, "T1", id, new XY(7, 4), new XY(8, 4), new XY(6, 1));
+					outputComponent(array, cellx, celly, "T2", id, new XY(5, 4), new XY(4, 4), new XY(6, 1));
+					outputComponent(array, cellx, celly, "T3", id, new XY(4, 8), new XY(4, 7), new XY(1, 8));
+					outputComponent(array, cellx, celly, "T4", id, new XY(4, 10), new XY(4, 11), new XY(1, 8));
+					
+					// Emitter1, Emitter2, Base, Collector
+					outputComponent(array, cellx, celly, "CS", id, new XY(7, 8), new XY(9, 8), new XY(8, 9), new XY(8, 10));
+
+					// Resistors
+					outputComponent(array, cellx, celly, "RLA", id, new XY(12, 3), new XY(12, 7));
+					outputComponent(array, cellx, celly, "RCS", id, new XY(12, 9), new XY(12, 13));
+					outputComponent(array, cellx, celly, "RLB", id, new XY(8, 13), new XY(12, 13));
+}
+			}
+		}
+	}
+
+	private void outputComponent(Cell[][] array, int cellx, int celly, String type, String id, XY... pins) {
+		String component = type + " " + id + "(";
+		boolean first = true;
+		for (XY loc : pins) {
+			int x = cellx + loc.getX();
+			int y = celly + loc.getY();
+			Cell cell = array[y][x];
+			if (cell.getType() == null || cell.getType() == PinType.NONE) {
+				throw new RuntimeException("Missing pin at " + x + "," + y);
+			}
+			if (!first) {
+				component += ", ";
+			}
+			int net = cell.getNet();
+			if (net == NET_VS) {
+				component += "VS";
+			} else if (net == NET_GND) {
+				component += "GND";
+			} else {
+				component += "N" + cell.getNet();
+			}
+			first = false;
+		}
+		component += ");";
+		System.out.println(component);
+	}
+
+	
+
+	
+	
+	/************************************************************************
+	 * START OF LABEL NETS VERSION 1
+	 ************************************************************************/
+
+	private void labelNetsV1(List<Cell[][]> blocks, List<XY> blockOrigins, List<XY> cellOffsets, Cell[][] array, int w, int h) {
+		// Trace the cell connectivity nets
+		traceNets(array);
+		
+		// List of nets to merge
+		Map<Integer, Integer> merge = new TreeMap<Integer, Integer>(); 
+		
+		connectAdjacentBlocks(w, h, array, merge);
+		
+		// Add the crossunders that link between the block
+		// also adds power and VCC
+		addCellCrossunders(blocks, blockOrigins, cellOffsets, array, merge);
+
+		
+		// Compress the map so that:
+		// 1->2 2->3 would be replaced by 1->3 and 2->3
+		compressMap(merge);
+
+
+		// Update the net numbers
+		for (int y = 0; y < h; y++) {
+			for (int x = 0; x < w; x++) {
+				Cell cell = array[y][x];
+				Integer update = merge.get(cell.getNet());
+				if (update != null) {
+					cell.setNet(update);
+				}
+			}
+		}
+	}
+
+	private void connectAdjacentBlocks(int w, int h, Cell[][] array, Map<Integer, Integer> merge) {
+		// Add the crossunders that link between the adjacent blocks
+		int countL = 0;
+		int countR = 0;
+		int countT = 0;
+		int countB = 0;
+		for (int y = 0; y < h; y++) {
+			for (int x = 0; x < w; x++) {
+				Cell cell = array[y][x];
+				Cell target = null;
+				try {
+					if (cell.getType() == PinType.LINK_L) {
+						countL++;
+						target = array[y][x - 5];
+						if (target.getType() != PinType.LINK_R) {
+							throw new RuntimeException("Something went wrong at " + x + "," + y);
+						}
+						merge(merge, cell.getNet(), target.getNet(), x, y, x - 5, y);
+					}
+					if (cell.getType() == PinType.LINK_R) {
+						countR++;
+						target = array[y][x + 5];
+						if (target.getType() != PinType.LINK_L) {
+							throw new RuntimeException("Something went wrong at " + x + "," + y);
+						}
+					}
+					if (cell.getType() == PinType.LINK_T) {
+						countT++;
+						target = array[y - 5][x];
+						if (target.getType() != PinType.LINK_B) {
+							throw new RuntimeException("Something went wrong at " + x + "," + y);
+						}
+						merge(merge, cell.getNet(), target.getNet(), x, y, x, y - 5);
+					}
+					if (cell.getType() == PinType.LINK_B) {
+						countB++;
+						target = array[y + 5][x];
+						if (target.getType() != PinType.LINK_T) {
+							throw new RuntimeException("Something went wrong at " + x + "," + y);
+						}
+					}
+				} catch (MergeException e) {
+					System.err.println(e);
+				}
+			}
+		}
+		System.out.println("countL = " + countL);
+		System.out.println("countR = " + countR);
+		System.out.println("countT = " + countT);
+		System.out.println("countB = " + countB);
+	}
+
+	private void addCellCrossunders(List<Cell[][]> blocks, List<XY> blockOrigins, List<XY> cellOffsets, Cell[][] array,
+			Map<Integer, Integer> merge) {
+		for (int i = 0; i < blocks.size(); i++) {
+			System.out.println("Adding crossunders to block " + i);
+			XY blockOrigin = blockOrigins.get(i);
+			XY cellOffset = cellOffsets.get(i);
+			System.out.println("Block origin = " + blockOrigin);
+			System.out.println("Cell Offset = " + cellOffset);
+			for (int xi = 0; xi < 10; xi++) {
+				for (int yi = 0; yi < 11; yi++) {
+					int cellx = blockOrigin.getX() + xi * 15 + cellOffset.getX();
+					int celly = blockOrigin.getY() + yi * 15 + cellOffset.getY();
+					// Sanity check we are where we think we are....
+					if (array[celly + 9][cellx + 7].getType() != PinType.CS_BASE_1) {
+						throw new RuntimeException("Cell alignnment error at " + cellx + "," + celly + "; bailing....");
+					}
+					try {
+						mergeCrossunder(merge, array, cellx, celly, 1, 4, 4, 1);
+						mergeCrossunder(merge, array, cellx, celly, 1, 10, 4, 13);
+						mergeCrossunder(merge, array, cellx, celly, 8, 1, 12, 1);
+						// Transistor pair
+						mergeCrossunder(merge, array, cellx, celly, 1, 6, 6, 1);
+						mergeCrossunder(merge, array, cellx, celly, 1, 6, 10, 3);
+						// Transistor pair
+						mergeCrossunder(merge, array, cellx, celly, 1, 8, 6, 13);
+						// Power nets
+						mergePower(merge, array, cellx, celly, 12, 8, NET_VS);
+						mergePower(merge, array, cellx, celly, 11, 12, NET_VS);
+						mergePower(merge, array, cellx, celly, 7, 11, NET_GND);
+						mergePower(merge, array, cellx, celly, 8, 11, NET_GND);
+						mergePower(merge, array, cellx, celly, 9, 11, NET_GND);
+					} catch (MergeException e) {
+						System.err.println(e);
+					}
+				}
+			}
+		}
+	}
+	
+	private void compressMap(Map<Integer, Integer> merge) {
+		int numchanged;
+		do {
+			numchanged = 0;
+			for (Map.Entry<Integer, Integer> entry : merge.entrySet()) {
+				if (merge.containsKey(entry.getValue())) {
+					merge.put(entry.getKey(), merge.get(entry.getValue()));
+					numchanged++;
+				}
+			}
+		} while (numchanged > 0);
+	}
+	
+	private void mergeCrossunder(Map<Integer, Integer> merge, Cell[][] array, int cellx, int celly, int x0, int y0, int x1, int y1) throws MergeException {
+		x0 += cellx;
+		x1 += cellx;
+		y0 += celly;
+		y1 += celly;
+		Cell cell0 = array[y0][x0];
+		Cell cell1 = array[y1][x1];
+		if (cell0.getType() != PinType.NORMAL) {
+			throw new MergeException("Missing pin at cell0", x0, y0, -1, -1);
+		}
+		if (cell1.getType() != PinType.NORMAL) {
+			throw new MergeException("Missing pin at cell1" , -1, -1, x1, y1);
+		}
+		merge(merge, cell0.getNet(), cell1.getNet(), x0, y0, x1, y1);
+	}
+	
+	private void mergePower(Map<Integer, Integer> merge, Cell[][] array, int cellx, int celly, int x0, int y0, int powernet) throws MergeException {
+		x0 += cellx;
+		y0 += celly;
+		Cell cell0 = array[y0][x0];
+		if (cell0.getType() == null || cell0.getType() == PinType.NONE) {
+			throw new MergeException("Missing power pin at cell: ", x0, y0, -1, -1);
+		}
+		merge(merge, cell0.getNet(), powernet, x0, y0, -1, -1);
+	}
+	
+	private void merge(Map<Integer, Integer> merge, int net0, int net1, int x0, int y0, int x1, int y1) throws MergeException {
+		// Return if either end of the underpass are unconnected, or they are already connected
+		if (net0 == 0 || net1 == 0 || net0 == net1) {
+			return;
+		}
+		// Always merge min -> max to avoid possibility of cycles
+		int min = Math.min(net0, net1);
+		int max = Math.max(net0, net1);
+		if (min == NET_GND || min == NET_VS) {
+			throw new MergeException("Short between GND and VS at ", x0, y0, x1, y1);
+		}
+		// Don't overwrite an existing entry, instead recurse to add it to the end of the chain
+		if (merge.containsKey(min)) {
+			merge(merge, merge.get(min), max, x0, y0, x1, y1); 
+		} else {
+			merge.put(min, max);
+		}
+	}
+
+	
+	
+	/************************************************************************
+	 * END OF OF LABEL NETS VERSION 1
+	 ************************************************************************/
+
+	
+	
+
+	
+	
 
 	public static final void main(String[] args) {
 		try {
-			if (args.length != 2) {
-				System.err.println("usage: java -jar ulamangling.jar <Src PNG> <Dst PNG> ");
-				System.exit(1);
-			}
-			File srcFile = new File(args[0]);
-			if (!srcFile.exists()) {
-				System.err.println("Src File: " + srcFile + " does not exist");
-				System.exit(1);
-			}
-			if (!srcFile.isFile()) {
-				System.err.println("Src File: " + srcFile + " is not a file");
-				System.exit(1);
-			}
-			File dstFile = new File(args[1]);
-
 			Process c = new Process();
-			String name = srcFile.getName();
-			name = name.substring(name.indexOf('_') + 1, name.lastIndexOf('.'));
-			System.out.println("# name = " + name);
 
-			c.convert(name, srcFile, dstFile);
+			if (args.length == 2 && args[0].equals("netlist")) {
+
+				// Netlist command reads in all 9 of the cells files and outputs a netlist
+				
+				c.netlist(args[1]);
+				
+			} else if (args.length == 3 && args[0].equals("extract")) {
+	
+				// Extract command processes a PNG and produces a cells file and a PNG
+				File srcFile = new File(args[1]);
+				if (!srcFile.exists()) {
+					System.err.println("Src File: " + srcFile + " does not exist");
+					System.exit(1);
+				}
+				if (!srcFile.isFile()) {
+					System.err.println("Src File: " + srcFile + " is not a file");
+					System.exit(1);
+				}
+				File dstFile = new File(args[2]);
+	
+				String name = srcFile.getName();
+				name = name.substring(name.indexOf('_') + 1, name.lastIndexOf('.'));
+				System.out.println("# name = " + name);
+	
+				c.extract(name, srcFile, dstFile);
+				
+			} else {
+				System.err.println("       java -jar ulamangling.jar netlist <Cells Base Name>");
+				System.err.println("usage: java -jar ulamangling.jar extract <Src PNG> <Dst PNG> ");
+				System.exit(1);
+			}
 
 		} catch (IOException e) {
 			e.printStackTrace();

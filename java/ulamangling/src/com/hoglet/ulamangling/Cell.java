@@ -21,6 +21,9 @@ public class Cell {
 	private int x2;
 	private int y2;
 	
+	private int net;
+	
+	
 
 	public Cell() {
 		this.connections = 0;
@@ -29,8 +32,14 @@ public class Cell {
 		this.dangleFail = false;
 		this.bridgeFail = false;
 		this.highlight = false;
+		this.net = 0;
 	}
 
+	public Cell(int x, int y) {
+		this();
+		this.pin = new Pin(x, y, PinType.NONE);
+	}
+	
 	public Cell(Cell from) {
 		this.connections = from.connections;
 		this.pin = from.pin;
@@ -42,6 +51,7 @@ public class Cell {
 		this.x2 = from.x2;
 		this.y1 = from.y1;
 		this.y2 = from.y2;
+		this.net = from.net;
 	}
 
 	public int getConnections() {
@@ -102,48 +112,60 @@ public class Cell {
 		return (connections & C_TOP) > 0;
 	}
 
-	public void setTop() {
+	public Cell setTop() {
 		connections |= C_TOP;
+		return this;
 	}
 
-	public void clearTop() {
+	public Cell clearTop() {
 		connections &= (C_ALL - C_TOP);
+		return this;
 	}
 
 	public boolean isRight() {
 		return (connections & C_RIGHT) > 0;
 	}
 
-	public void setRight() {
+	public Cell setRight() {
 		connections |= C_RIGHT;
+		return this;
 	}
 
-	public void clearRight() {
+	public Cell clearRight() {
 		connections &= (C_ALL - C_RIGHT);
+		return this;
 	}
 
 	public boolean isBottom() {
 		return (connections & C_BOTTOM) > 0;
 	}
 
-	public void setBottom() {
+	public Cell setBottom() {
 		connections |= C_BOTTOM;
+		return this;
 	}
 
-	public void clearBottom() {
+	public Cell clearBottom() {
 		connections &= (C_ALL - C_BOTTOM);
+		return this;
 	}
 
 	public boolean isLeft() {
 		return (connections & C_LEFT) > 0;
 	}
 
-	public void setLeft() {
+	public Cell setLeft() {
 		connections |= C_LEFT;
+		return this;
 	}
 
-	public void clearLeft() {
+	public Cell clearLeft() {
 		connections &= (C_ALL - C_LEFT);
+		return this;
+	}
+	
+	public void setHighlight(boolean highlight) {
+		this.highlight = highlight;
 	}
 
 	public boolean isHighlight() {
@@ -180,6 +202,14 @@ public class Cell {
 
 	public void setY2(int y2) {
 		this.y2 = y2;
+	}
+
+	public int getNet() {
+		return net;
+	}
+
+	public void setNet(int net) {
+		this.net = net;
 	}
 
 }
