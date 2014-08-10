@@ -21,6 +21,18 @@ public class Pin extends XY {
 		LINK_R,
 		LINK_T,
 		LINK_B,
+		UNDER_1,
+		UNDER_2,
+		UNDER_3,
+		UNDER_4,
+		UNDER_5,
+		UNDER_6,
+		UNDER_7,
+		UNDER_8,
+		UNDER_9,
+		UNDER_10,
+		UNDER_11,
+		VSS,
 		CS_EMITTER_1,
 		CS_EMITTER_2,
 		CS_EMITTER_3,
@@ -60,6 +72,14 @@ public class Pin extends XY {
 		return type;
 	}
 	
+	public boolean isVss() {
+		return type == PinType.VSS;
+	}
+	
+	public boolean isGnd() {
+		return type == PinType.CS_GND_1 || type == PinType.CS_GND_2 ||  type == PinType.CS_GND_3; 
+	}
+
 	public void plot(BufferedImage image, int px, int py, int w, int h, int rgb) {
 		
 		px += 1;
@@ -68,16 +88,7 @@ public class Pin extends XY {
 		switch (type) {
 		case NONE:
 			break;
-		case NORMAL:
-		case IO:
-		case LINK_L:
-		case LINK_R:
-		case LINK_T:
-		case LINK_B:
-		case CS_BASE_1:
-		case CS_BASE_3:
-			rectangle(image, px + w / 4, py + h / 4, w / 2, h / 2, rgb);
-			break;
+
 		case CS_EMITTER_1:
 			rectangle(image, px + w / 4, py + h / 2, w * 3 / 4, h / 2, rgb);
 			break;
@@ -118,7 +129,10 @@ public class Pin extends XY {
 			break;
 		case CS_GND_3:
 			rectangle(image, px , py, w * 3 / 4, h * 3 / 4, rgb);
-			break;			
+			break;
+		default:
+			rectangle(image, px + w / 4, py + h / 4, w / 2, h / 2, rgb);
+			break;
 		}		
 	}
 
@@ -162,6 +176,20 @@ public class Pin extends XY {
 			return "^";
 		case LINK_B:
 			return "V";
+		case UNDER_1:
+		case UNDER_2:
+		case UNDER_3:
+		case UNDER_4:
+		case UNDER_5:
+		case UNDER_6:
+		case UNDER_7:
+		case UNDER_8:
+		case UNDER_9:
+		case UNDER_10:
+		case UNDER_11:
+			return "U";
+		case VSS:
+			return "1";
 		case CS_BASE_1:
 		case CS_BASE_2:
 		case CS_BASE_3:

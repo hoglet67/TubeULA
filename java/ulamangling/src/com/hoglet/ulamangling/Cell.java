@@ -211,5 +211,4 @@ public class Cell {
 	public void setNet(int net) {
 		this.net = net;
 	}
-
 }

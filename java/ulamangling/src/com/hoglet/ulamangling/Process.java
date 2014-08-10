@@ -1,6 +1,5 @@
 package com.hoglet.ulamangling;
 
-import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.io.File;
@@ -12,8 +11,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
 
 import javax.imageio.ImageIO;
 
@@ -23,11 +20,11 @@ import com.hoglet.ulamangling.Pin.PinType;
 
 public class Process {
 
-	private static final int NET_VS  = 99991;
+	private static final int NET_VSS  = 99991;
 	private static final int NET_GND = 99990;
 	
 	// Whether to output annotated PNG
-	public static final boolean OUTPUT_ANNOTATED_PNG = true;
+	public static final boolean OUTPUT_ANNOTATED_PNG = false;
 	
 	// Nominal cell size in pixels
 	public static final int CELL_SIZE = 40;
@@ -66,10 +63,28 @@ public class Process {
 
 	public static Map<String, Cell[]> overrideLists = new HashMap<String, Cell[]>();
 
+	public static Map<PinType, XY[]> underpassMap = new HashMap<Pin.PinType, XY[]>(); 
 	
 	// Attempt 6
 	// These values need to be manually extracted for each image
 	static {
+		
+		underpassMap.put(PinType.UNDER_1, new XY[] { new XY(-3, 3) });
+		underpassMap.put(PinType.UNDER_2, new XY[] { new XY(-5, 5), new XY(4, 2) });
+		underpassMap.put(PinType.UNDER_3, new XY[] { new XY(4, 0) });
+		underpassMap.put(PinType.UNDER_4, new XY[] { new XY(-4, 0) });
+		underpassMap.put(PinType.UNDER_5, new XY[] { new XY(-4, -2), new XY(-9, 3) });
+		underpassMap.put(PinType.UNDER_6, new XY[] { new XY(3, -3) });
+		underpassMap.put(PinType.UNDER_7, new XY[] { new XY(5, -5), new XY(9, -3) });
+		underpassMap.put(PinType.UNDER_8, new XY[] { new XY(5, 5) });
+		underpassMap.put(PinType.UNDER_9, new XY[] { new XY(3, 3) });
+		underpassMap.put(PinType.UNDER_10, new XY[] { new XY(-3, -3) });
+		underpassMap.put(PinType.UNDER_11, new XY[] { new XY(-5, -5) });
+		underpassMap.put(PinType.LINK_L, new XY[] { new XY(-5, 0) });
+		underpassMap.put(PinType.LINK_R, new XY[] { new XY(5, 0) });
+		underpassMap.put(PinType.LINK_T, new XY[] { new XY(0, -5) });
+		underpassMap.put(PinType.LINK_B, new XY[] { new XY(0, 5) });
+		
 
 		startCells.put("00", new XY(5, 5));
 		blockCells.put("00", new XY(8, 8));
@@ -239,20 +254,49 @@ public class Process {
 
 	}
 
-	public static Pin[] cellPins = new Pin[] { new Pin(4, 1, PinType.NORMAL), new Pin(6, 1, PinType.NORMAL),
-			new Pin(8, 1, PinType.NORMAL), new Pin(12, 1, PinType.NORMAL), new Pin(10, 3, PinType.NORMAL),
-			new Pin(12, 3, PinType.NORMAL), new Pin(1, 4, PinType.NORMAL), new Pin(4, 4, PinType.NORMAL),
-			new Pin(5, 4, PinType.NORMAL), new Pin(7, 4, PinType.NORMAL), new Pin(8, 4, PinType.NORMAL),
-			new Pin(1, 6, PinType.NORMAL), new Pin(4, 7, PinType.NORMAL), new Pin(7, 7, PinType.CS_EMITTER_1),
-			new Pin(8, 7, PinType.CS_EMITTER_2), new Pin(9, 7, PinType.CS_EMITTER_3), new Pin(7, 8, PinType.CS_EMITTER_4),
-			new Pin(8, 8, PinType.CS_EMITTER_5), new Pin(9, 8, PinType.CS_EMITTER_6), new Pin(12, 7, PinType.NORMAL),
-			new Pin(1, 8, PinType.NORMAL), new Pin(4, 8, PinType.NORMAL), new Pin(12, 8, PinType.NORMAL),
-			new Pin(7, 9, PinType.CS_BASE_1), new Pin(8, 9, PinType.CS_BASE_2), new Pin(9, 9, PinType.CS_BASE_3),
-			new Pin(12, 9, PinType.NORMAL), new Pin(1, 10, PinType.NORMAL), new Pin(4, 10, PinType.NORMAL),
-			new Pin(7, 10, PinType.CS_COLLECTOR_1), new Pin(8, 10, PinType.CS_COLLECTOR_2), new Pin(9, 10, PinType.CS_COLLECTOR_3),
-			new Pin(4, 11, PinType.NORMAL), new Pin(7, 11, PinType.CS_GND_1), new Pin(8, 11, PinType.CS_GND_2),
-			new Pin(9, 11, PinType.CS_GND_3), new Pin(11, 12, PinType.NORMAL), new Pin(4, 13, PinType.NORMAL),
-			new Pin(6, 13, PinType.NORMAL), new Pin(8, 13, PinType.NORMAL), new Pin(12, 13, PinType.NORMAL) };
+	public static Pin[] cellPins = new Pin[] {
+		new Pin(4, 1, PinType.UNDER_1), 
+		new Pin(6, 1, PinType.UNDER_2),
+		new Pin(8, 1, PinType.UNDER_3), 
+		new Pin(12, 1, PinType.UNDER_4), 
+		new Pin(10, 3, PinType.UNDER_5),
+		new Pin(12, 3, PinType.NORMAL), 
+		new Pin(1, 4, PinType.UNDER_6), 
+		new Pin(4, 4, PinType.NORMAL),
+		new Pin(5, 4, PinType.NORMAL), 
+		new Pin(7, 4, PinType.NORMAL), 
+		new Pin(8, 4, PinType.NORMAL),
+		new Pin(1, 6, PinType.UNDER_7), 
+		new Pin(4, 7, PinType.NORMAL), 
+		new Pin(7, 7, PinType.CS_EMITTER_1),
+		new Pin(8, 7, PinType.CS_EMITTER_2), 
+		new Pin(9, 7, PinType.CS_EMITTER_3), 
+		new Pin(7, 8, PinType.CS_EMITTER_4),
+		new Pin(8, 8, PinType.CS_EMITTER_5), 
+		new Pin(9, 8, PinType.CS_EMITTER_6), 
+		new Pin(12, 7, PinType.NORMAL),
+		new Pin(1, 8, PinType.UNDER_8), 
+		new Pin(4, 8, PinType.NORMAL), 
+		new Pin(12, 8, PinType.VSS),
+		new Pin(7, 9, PinType.CS_BASE_1), 
+		new Pin(8, 9, PinType.CS_BASE_2), 
+		new Pin(9, 9, PinType.CS_BASE_3),
+		new Pin(12, 9, PinType.NORMAL), 
+		new Pin(1, 10, PinType.UNDER_9), 
+		new Pin(4, 10, PinType.NORMAL),
+		new Pin(7, 10, PinType.CS_COLLECTOR_1), 
+		new Pin(8, 10, PinType.CS_COLLECTOR_2), 
+		new Pin(9, 10, PinType.CS_COLLECTOR_3),
+		new Pin(4, 11, PinType.NORMAL), 
+		new Pin(7, 11, PinType.CS_GND_1), 
+		new Pin(8, 11, PinType.CS_GND_2),
+		new Pin(9, 11, PinType.CS_GND_3), 
+		new Pin(11, 12, PinType.VSS), 
+		new Pin(4, 13, PinType.UNDER_10),
+		new Pin(6, 13, PinType.UNDER_11), 
+		new Pin(8, 13, PinType.NORMAL), 
+		new Pin(12, 13, PinType.NORMAL)
+	};
 
 	
 	
@@ -316,6 +360,10 @@ public class Process {
 
 		return result;
 	}
+	
+	/****************************************************************
+	 * START OF EXTRACT CODE
+	 ****************************************************************/
 
 	public void extract(String name, File srcFile, File dstFile) throws IOException {
 
@@ -426,9 +474,6 @@ public class Process {
         FileWriter writer = new FileWriter(new File("cells_"+ name + ".json"));
         gson.toJson(cellsOut8, writer);
         writer.close();
-         
-
-		
 		
 		if (OUTPUT_ANNOTATED_PNG) {
 			System.out.println("# Annotating PNG");
@@ -437,70 +482,6 @@ public class Process {
 			ImageIO.write(image, "png", dstFile);
 		}
 	}
-
-	private void traceNets(Cell[][] cells) {
-		int net = 1;
-		for (int y = 0; y < cells.length; y++) {
-			for (int x = 0; x < cells[y].length; x++) {
-				Cell cell = cells[y][x];
-				if (cell.getNet() == 0 && cell.getType() != null && cell.getType() != PinType.NONE && cell.getConnections() > 0) {
-					traceNet(cells, x, y, net++);
-				}
-			}
-		}
-	}
-
-	private void traceNet(Cell[][] cells, int x, int y, int net) {
-		Cell cell = cells[y][x];
-		if (cell.getNet() > 0) {
-			return;
-		}
-		cell.setNet(net);
-		if (cell.isLeft()) {
-			traceNet(cells, x - 1, y, net);
-		}
-		if (cell.isRight()) {
-			traceNet(cells, x + 1, y, net);
-		}
-		if (cell.isTop()) {
-			traceNet(cells, x, y - 1, net);
-		}
-		if (cell.isBottom()) {
-			traceNet(cells, x, y + 1, net);
-		}
-	}
-	
-	private void dumpCells(Cell[][] cells, Map<Integer, String> nameMap, boolean nets) {
-		for (int y = 0; y < cells.length; y++) {
-			for (int x = 0; x < cells[y].length; x++) {
-				Cell cell = cells[y][x];
-				Pin pin = cell.getPin();
-				if (pin != null) {
-					System.out.print(pin);
-				} else {
-					System.out.print(" ");
-				}
-				if (nets) {
-					int net = cell.getNet();
-					if (cell.getNet() > 0) {
-						String name = nameMap.get(net);
-						if (name == null) {
-							name = "" + net;
-						}
-						while (name.length() < 6) {
-							name += " ";
-						}
-						System.out.print(name);
-					} else {
-						System.out.print("      ");
-					}
-				}
-			}
-			System.out.println();
-		}
-	}
-
-	
 	
 	private Cell[][] initGrid(int w, int h, int[][] pixels, double[] reference) {
 		int[] xTotals = new int[w];
@@ -524,18 +505,6 @@ public class Process {
 		return cells;
 	}
 	
-	@SuppressWarnings("unused")
-	private void copyGrid(Cell[][] from, Cell[][] to) {
-		for (int yi = 0; yi < from.length; yi++) {
-			for (int xi = 0; xi < from[yi].length; xi++) {
-				to[yi][xi].setX1(from[yi][xi].getX1());
-				to[yi][xi].setX2(from[yi][xi].getX2());
-				to[yi][xi].setY1(from[yi][xi].getY1());
-				to[yi][xi].setY2(from[yi][xi].getY2());
-			}			
-		}
-	}
-
 	private Cell[][] initCells(int w, int h) {
 		Cell[][] cells = new Cell[h][w];
 		for (int xi = 0; xi < w; xi++) {
@@ -544,17 +513,6 @@ public class Process {
 			}
 		}
 		return cells;
-	}
-	
-	@SuppressWarnings("unused")
-	private Cell[][] cloneCells(Cell[][] from) {
-		Cell[][] to = new Cell[from.length][from[0].length];
-		for (int yi = 0; yi < from.length; yi++) {
-			for (int xi = 0; xi < from[yi].length; xi++) {
-				to[yi][xi] = new Cell(from[yi][xi]);
-			}
-		}
-		return to;
 	}
 	
 	// Optimize the grid by correlating locally over a smaller window (e.g. 16x16 cells)
@@ -893,19 +851,6 @@ public class Process {
 			}
 		}
 		
-		//		for (int i = 0; i < 5; i++) {
-		//			addPeriperalCell(cells, horPeripheralPins, 11 + 31 * i, 0, false, false);
-		//		}
-		//		for (int i = 0; i < 6; i++) {
-		//			addPeriperalCell(cells, verPeripheralPins, 0, 3 + 31 * i, true, false);
-		//		}
-		//		for (int i = 0; i < 6; i++) {
-		//			cells[2][4 + 31 * i].setPin(new Pin(0, 0, PinType.NORMAL));
-		//		}
-		//		for (int i = 0; i < 5; i++) {
-		//			cells[29 + 31 * i][2].setPin(new Pin(0, 0, PinType.NORMAL));
-		//		}
-		
 		for (Pin pin : ioPinList) {
 			cells[pin.getY()][pin.getX()].setPin(pin);
 		}
@@ -959,33 +904,6 @@ public class Process {
 		return i + bestj;
 	}
 
-	@SuppressWarnings("unused")
-	private void dumpXGraph(String title, List<Integer> grid, int n, int val) {
-		System.out.println(" \" " + title);
-		for (int i = 0; i < n; i++) {
-			System.out.println(i + "\t" + (grid.contains(i) ? val : 0));
-		}
-		System.out.println("\n");
-	}
-
-	@SuppressWarnings("unused")
-	private void dumpXGraph(String title, double[] a) {
-		System.out.println(" \" " + title);
-		for (int i = 0; i < a.length; i++) {
-			System.out.println(i + "\t" + a[i]);
-		}
-		System.out.println("\n");
-	}
-
-	@SuppressWarnings("unused")
-	private void dumpXGraph(String title, int[] a) {
-		System.out.println(" \" " + title);
-		for (int i = 0; i < a.length; i++) {
-			System.out.println(i + "\t" + a[i]);
-		}
-		System.out.println("\n");
-	}
-
 	private void gridHistogram(int[][] pixels, int x1, int y1, int x2, int y2, int[] xTotals, int[] yTotals) {
 		Arrays.fill(xTotals, 0);
 		Arrays.fill(yTotals, 0);
@@ -1002,32 +920,13 @@ public class Process {
 		}
 	}
 
-
-	@SuppressWarnings("unused")
-	private void hueHistogram(int[][] pixels, Map<Integer, Integer> histo) {
-		SortedMap<Integer, Integer> rgbToHue = new TreeMap<Integer, Integer>();
-		for (int y = 0; y < pixels.length; y++) {
-			for (int x = 0; x < pixels[y].length; x++) {
-				int rgb = pixels[y][x];
-				Integer hue = rgbToHue.get(rgb);
-				if (hue == null) {
-					int r = (rgb & 0xff0000) >> 16;
-					int g = (rgb & 0x00ff00) >> 8;
-					int b = (rgb & 0x0000ff);
-					float[] hsv = Color.RGBtoHSB(r, g, b, null);
-					hue = (int) (hsv[0] * 360.0);
-					rgbToHue.put(rgb, hue);
-				}
-				Integer count = histo.get(hue);
-				if (count == null) {
-					count = 1;
-				} else {
-					count = count + 1;
-				}
-				histo.put(hue, count);
-			}
-		}
-	}
+	/****************************************************************
+	 * END OF EXTRACT CODE
+	 ****************************************************************/
+	
+	/****************************************************************
+	 * START OF NETLIST CODE
+	 ****************************************************************/
 	
 	public void netlist(String blockBase) throws IOException {
 		
@@ -1085,7 +984,7 @@ public class Process {
 		}
 
 		
-		labelNetsV1(blocks, blockOrigins, cellOffsets, array, w, h);
+		traceConnections(array);
 		
 		Map<Integer, String> nameMap = buildNameMap(array, w, h);
 		
@@ -1115,10 +1014,63 @@ public class Process {
 		}
 	}
 
+
+	private void traceConnections(Cell[][] array) {
+		// First trace the power and ground nets
+		for (int y = 0; y < array.length; y++) {
+			for (int x = 0; x < array[y].length; x++) {
+				Cell cell = array[y][x];
+				if (cell.getPin() != null && cell.getPin().isGnd()) {
+					traceConnections(array, x, y, NET_GND);
+				}
+				if (cell.getPin() != null && cell.getPin().isVss()) {
+					traceConnections(array, x, y, NET_VSS);
+				}
+			}
+		}
+		// Then trace the remainder
+		int net = 1;
+		for (int y = 0; y < array.length; y++) {
+			for (int x = 0; x < array[y].length; x++) {
+				Cell cell = array[y][x];
+				// Start at a connected pin that hasn't been labeled with a net
+				if (cell.getNet() == 0 && cell.getType() != null && cell.getType() != PinType.NONE && cell.getConnections() > 0) {
+					traceConnections(array, x, y, net++);
+				}
+			}
+		}
+	}
+
+	private void traceConnections(Cell[][] cells, int x, int y, int net) {
+		Cell cell = cells[y][x];
+		if (cell.getNet() > 0) {
+			return;
+		}
+		cell.setNet(net);
+		if (cell.isLeft()) {
+			traceConnections(cells, x - 1, y, net);
+		}
+		if (cell.isRight()) {
+			traceConnections(cells, x + 1, y, net);
+		}
+		if (cell.isTop()) {
+			traceConnections(cells, x, y - 1, net);
+		}
+		if (cell.isBottom()) {
+			traceConnections(cells, x, y + 1, net);
+		}
+		XY[] connections = underpassMap.get(cell.getType());
+		if (connections != null) {
+			for (XY connection : connections) {
+				traceConnections(cells, x + connection.getX(), y + connection.getY(), net);
+			}
+		}
+	}
+	
 	private Map<Integer, String> buildNameMap(Cell[][] array, int w, int h) {
 		Map<Integer, String> nameMap = new HashMap<Integer, String>();
 		nameMap.put(NET_GND, "GND");
-		nameMap.put(NET_VS, "VS");
+		nameMap.put(NET_VSS, "VS");
 		for (int y = 0; y < h; y++) {
 			for (int x = 0; x < w; x++) {
 				Cell cell = array[y][x];
@@ -1150,22 +1102,22 @@ public class Process {
 					int cellx = blockOrigin.getX() + xi * 15 + cellOffset.getX();
 					int celly = blockOrigin.getY() + yi * 15 + cellOffset.getY();
 
-					String id = "B" + (i % 3) + (i / 3) + "_C" + Integer.toHexString(xi) + Integer.toHexString(yi) + "_";
+					String id = "B" + (i % 3) + (i / 3) + "_C" + Integer.toHexString(xi) + Integer.toHexString(yi);
 					
 					// Emitter, Base, Collector
-					outputComponent(array, cellx, celly, "T1", id, new XY(7, 4), new XY(8, 4), new XY(6, 1));
-					outputComponent(array, cellx, celly, "T2", id, new XY(5, 4), new XY(4, 4), new XY(6, 1));
-					outputComponent(array, cellx, celly, "T3", id, new XY(4, 8), new XY(4, 7), new XY(1, 8));
-					outputComponent(array, cellx, celly, "T4", id, new XY(4, 10), new XY(4, 11), new XY(1, 8));
+					outputComponent(array, cellx, celly, "TR", id + "_T1", new XY(7, 4), new XY(8, 4), new XY(6, 1));
+					outputComponent(array, cellx, celly, "TR", id + "_T2", new XY(5, 4), new XY(4, 4), new XY(6, 1));
+					outputComponent(array, cellx, celly, "TR", id + "_T3", new XY(4, 8), new XY(4, 7), new XY(1, 8));
+					outputComponent(array, cellx, celly, "TR", id + "_T4", new XY(4, 10), new XY(4, 11), new XY(1, 8));
 					
 					// Emitter1, Emitter2, Base, Collector
 					outputComponent(array, cellx, celly, "CS", id, new XY(7, 8), new XY(9, 8), new XY(8, 9), new XY(8, 10));
 
 					// Resistors
-					outputComponent(array, cellx, celly, "RLA", id, new XY(12, 3), new XY(12, 7));
-					outputComponent(array, cellx, celly, "RCS", id, new XY(12, 9), new XY(12, 13));
-					outputComponent(array, cellx, celly, "RLB", id, new XY(8, 13), new XY(12, 13));
-}
+					outputComponent(array, cellx, celly, "R", id + "_RLA", new XY(12, 3), new XY(12, 7));
+					outputComponent(array, cellx, celly, "R", id + "_RCS", new XY(12, 9), new XY(12, 13));
+					outputComponent(array, cellx, celly, "R", id + "_RLB", new XY(8, 13), new XY(12, 13));
+				}
 			}
 		}
 	}
@@ -1173,7 +1125,9 @@ public class Process {
 	private void outputComponent(Cell[][] array, int cellx, int celly, String type, String id, XY... pins) {
 		String component = type + " " + id + "(";
 		boolean first = true;
-		for (XY loc : pins) {
+		boolean allUsed = true;
+		for (int i = 0; i < pins.length; i++) {
+			XY loc = pins[i];
 			int x = cellx + loc.getX();
 			int y = celly + loc.getY();
 			Cell cell = array[y][x];
@@ -1184,7 +1138,8 @@ public class Process {
 				component += ", ";
 			}
 			int net = cell.getNet();
-			if (net == NET_VS) {
+			allUsed &= net > 0;
+			if (net == NET_VSS) {
 				component += "VS";
 			} else if (net == NET_GND) {
 				component += "GND";
@@ -1194,208 +1149,46 @@ public class Process {
 			first = false;
 		}
 		component += ");";
-		System.out.println(component);
-	}
-
-	
-
-	
-	
-	/************************************************************************
-	 * START OF LABEL NETS VERSION 1
-	 ************************************************************************/
-
-	private void labelNetsV1(List<Cell[][]> blocks, List<XY> blockOrigins, List<XY> cellOffsets, Cell[][] array, int w, int h) {
-		// Trace the cell connectivity nets
-		traceNets(array);
-		
-		// List of nets to merge
-		Map<Integer, Integer> merge = new TreeMap<Integer, Integer>(); 
-		
-		connectAdjacentBlocks(w, h, array, merge);
-		
-		// Add the crossunders that link between the block
-		// also adds power and VCC
-		addCellCrossunders(blocks, blockOrigins, cellOffsets, array, merge);
-
-		
-		// Compress the map so that:
-		// 1->2 2->3 would be replaced by 1->3 and 2->3
-		compressMap(merge);
-
-
-		// Update the net numbers
-		for (int y = 0; y < h; y++) {
-			for (int x = 0; x < w; x++) {
-				Cell cell = array[y][x];
-				Integer update = merge.get(cell.getNet());
-				if (update != null) {
-					cell.setNet(update);
-				}
-			}
-		}
-	}
-
-	private void connectAdjacentBlocks(int w, int h, Cell[][] array, Map<Integer, Integer> merge) {
-		// Add the crossunders that link between the adjacent blocks
-		int countL = 0;
-		int countR = 0;
-		int countT = 0;
-		int countB = 0;
-		for (int y = 0; y < h; y++) {
-			for (int x = 0; x < w; x++) {
-				Cell cell = array[y][x];
-				Cell target = null;
-				try {
-					if (cell.getType() == PinType.LINK_L) {
-						countL++;
-						target = array[y][x - 5];
-						if (target.getType() != PinType.LINK_R) {
-							throw new RuntimeException("Something went wrong at " + x + "," + y);
-						}
-						merge(merge, cell.getNet(), target.getNet(), x, y, x - 5, y);
-					}
-					if (cell.getType() == PinType.LINK_R) {
-						countR++;
-						target = array[y][x + 5];
-						if (target.getType() != PinType.LINK_L) {
-							throw new RuntimeException("Something went wrong at " + x + "," + y);
-						}
-					}
-					if (cell.getType() == PinType.LINK_T) {
-						countT++;
-						target = array[y - 5][x];
-						if (target.getType() != PinType.LINK_B) {
-							throw new RuntimeException("Something went wrong at " + x + "," + y);
-						}
-						merge(merge, cell.getNet(), target.getNet(), x, y, x, y - 5);
-					}
-					if (cell.getType() == PinType.LINK_B) {
-						countB++;
-						target = array[y + 5][x];
-						if (target.getType() != PinType.LINK_T) {
-							throw new RuntimeException("Something went wrong at " + x + "," + y);
-						}
-					}
-				} catch (MergeException e) {
-					System.err.println(e);
-				}
-			}
-		}
-		System.out.println("countL = " + countL);
-		System.out.println("countR = " + countR);
-		System.out.println("countT = " + countT);
-		System.out.println("countB = " + countB);
-	}
-
-	private void addCellCrossunders(List<Cell[][]> blocks, List<XY> blockOrigins, List<XY> cellOffsets, Cell[][] array,
-			Map<Integer, Integer> merge) {
-		for (int i = 0; i < blocks.size(); i++) {
-			System.out.println("Adding crossunders to block " + i);
-			XY blockOrigin = blockOrigins.get(i);
-			XY cellOffset = cellOffsets.get(i);
-			System.out.println("Block origin = " + blockOrigin);
-			System.out.println("Cell Offset = " + cellOffset);
-			for (int xi = 0; xi < 10; xi++) {
-				for (int yi = 0; yi < 11; yi++) {
-					int cellx = blockOrigin.getX() + xi * 15 + cellOffset.getX();
-					int celly = blockOrigin.getY() + yi * 15 + cellOffset.getY();
-					// Sanity check we are where we think we are....
-					if (array[celly + 9][cellx + 7].getType() != PinType.CS_BASE_1) {
-						throw new RuntimeException("Cell alignnment error at " + cellx + "," + celly + "; bailing....");
-					}
-					try {
-						mergeCrossunder(merge, array, cellx, celly, 1, 4, 4, 1);
-						mergeCrossunder(merge, array, cellx, celly, 1, 10, 4, 13);
-						mergeCrossunder(merge, array, cellx, celly, 8, 1, 12, 1);
-						// Transistor pair
-						mergeCrossunder(merge, array, cellx, celly, 1, 6, 6, 1);
-						mergeCrossunder(merge, array, cellx, celly, 1, 6, 10, 3);
-						// Transistor pair
-						mergeCrossunder(merge, array, cellx, celly, 1, 8, 6, 13);
-						// Power nets
-						mergePower(merge, array, cellx, celly, 12, 8, NET_VS);
-						mergePower(merge, array, cellx, celly, 11, 12, NET_VS);
-						mergePower(merge, array, cellx, celly, 7, 11, NET_GND);
-						mergePower(merge, array, cellx, celly, 8, 11, NET_GND);
-						mergePower(merge, array, cellx, celly, 9, 11, NET_GND);
-					} catch (MergeException e) {
-						System.err.println(e);
-					}
-				}
-			}
-		}
-	}
-	
-	private void compressMap(Map<Integer, Integer> merge) {
-		int numchanged;
-		do {
-			numchanged = 0;
-			for (Map.Entry<Integer, Integer> entry : merge.entrySet()) {
-				if (merge.containsKey(entry.getValue())) {
-					merge.put(entry.getKey(), merge.get(entry.getValue()));
-					numchanged++;
-				}
-			}
-		} while (numchanged > 0);
-	}
-	
-	private void mergeCrossunder(Map<Integer, Integer> merge, Cell[][] array, int cellx, int celly, int x0, int y0, int x1, int y1) throws MergeException {
-		x0 += cellx;
-		x1 += cellx;
-		y0 += celly;
-		y1 += celly;
-		Cell cell0 = array[y0][x0];
-		Cell cell1 = array[y1][x1];
-		if (cell0.getType() != PinType.NORMAL) {
-			throw new MergeException("Missing pin at cell0", x0, y0, -1, -1);
-		}
-		if (cell1.getType() != PinType.NORMAL) {
-			throw new MergeException("Missing pin at cell1" , -1, -1, x1, y1);
-		}
-		merge(merge, cell0.getNet(), cell1.getNet(), x0, y0, x1, y1);
-	}
-	
-	private void mergePower(Map<Integer, Integer> merge, Cell[][] array, int cellx, int celly, int x0, int y0, int powernet) throws MergeException {
-		x0 += cellx;
-		y0 += celly;
-		Cell cell0 = array[y0][x0];
-		if (cell0.getType() == null || cell0.getType() == PinType.NONE) {
-			throw new MergeException("Missing power pin at cell: ", x0, y0, -1, -1);
-		}
-		merge(merge, cell0.getNet(), powernet, x0, y0, -1, -1);
-	}
-	
-	private void merge(Map<Integer, Integer> merge, int net0, int net1, int x0, int y0, int x1, int y1) throws MergeException {
-		// Return if either end of the underpass are unconnected, or they are already connected
-		if (net0 == 0 || net1 == 0 || net0 == net1) {
-			return;
-		}
-		// Always merge min -> max to avoid possibility of cycles
-		int min = Math.min(net0, net1);
-		int max = Math.max(net0, net1);
-		if (min == NET_GND || min == NET_VS) {
-			throw new MergeException("Short between GND and VS at ", x0, y0, x1, y1);
-		}
-		// Don't overwrite an existing entry, instead recurse to add it to the end of the chain
-		if (merge.containsKey(min)) {
-			merge(merge, merge.get(min), max, x0, y0, x1, y1); 
+		if (allUsed) {
+			System.out.println(component);
 		} else {
-			merge.put(min, max);
+			System.out.println("# " + component);
 		}
 	}
-
 	
+	private void dumpCells(Cell[][] cells, Map<Integer, String> nameMap, boolean nets) {
+		for (int y = 0; y < cells.length; y++) {
+			for (int x = 0; x < cells[y].length; x++) {
+				Cell cell = cells[y][x];
+				Pin pin = cell.getPin();
+				if (pin != null) {
+					System.out.print(pin);
+				} else {
+					System.out.print(" ");
+				}
+				if (nets) {
+					int net = cell.getNet();
+					if (cell.getNet() > 0) {
+						String name = nameMap.get(net);
+						if (name == null) {
+							name = "" + net;
+						}
+						while (name.length() < 6) {
+							name += " ";
+						}
+						System.out.print(name);
+					} else {
+						System.out.print("      ");
+					}
+				}
+			}
+			System.out.println();
+		}
+	}
 	
-	/************************************************************************
-	 * END OF OF LABEL NETS VERSION 1
-	 ************************************************************************/
-
-	
-	
-
-	
-	
+	/****************************************************************
+	 * END OF NETLIST CODE
+	 ****************************************************************/
 
 	public static final void main(String[] args) {
 		try {
