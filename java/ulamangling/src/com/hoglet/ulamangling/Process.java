@@ -20,11 +20,12 @@ import com.hoglet.ulamangling.Pin.PinType;
 
 public class Process {
 
-	private static final int NET_VSS  = 99991;
-	private static final int NET_GND = 99990;
+	private static final int NET_VSS  = 1;
+	private static final int NET_GND = 2;
+	private static final int NET_NORMAL = 3;
 	
 	// Whether to output annotated PNG
-	public static final boolean OUTPUT_ANNOTATED_PNG = false;
+	public static final boolean OUTPUT_ANNOTATED_PNG = true;
 	
 	// Nominal cell size in pixels
 	public static final int CELL_SIZE = 40;
@@ -40,14 +41,6 @@ public class Process {
 
 	// Threshold used when searching for the next grid line in pixels
 	public static final int SEARCH_THRESH = 3;
-	
-	// Threshold used when determining when determine connectivity to an
-	// adjacent cell
-	public static final int CONNECT_THRESH = 20;
-	
-	// Threshold used when determining when determine connectivity to an
-	// adjacent cell
-	public static final int BLANK_THRESH = 100;
 
 	// The X,Y coordinates of the top,left of the ULA cell grid
 	public static Map<String, XY> startCells = new HashMap<String, XY>();
@@ -65,8 +58,6 @@ public class Process {
 
 	public static Map<PinType, XY[]> underpassMap = new HashMap<Pin.PinType, XY[]>(); 
 	
-	// Attempt 6
-	// These values need to be manually extracted for each image
 	static {
 		
 		underpassMap.put(PinType.UNDER_1, new XY[] { new XY(-3, 3) });
@@ -250,6 +241,7 @@ public class Process {
 				new Pin(157, 172, "HDOE")
 		});
 		overrideLists.put("22", new Cell[] {
+				new Cell(152, 54).setLeft().setRight()
 		});
 
 	}
@@ -260,42 +252,42 @@ public class Process {
 		new Pin(8, 1, PinType.UNDER_3), 
 		new Pin(12, 1, PinType.UNDER_4), 
 		new Pin(10, 3, PinType.UNDER_5),
-		new Pin(12, 3, PinType.NORMAL), 
+		new Pin(12, 3, PinType.RES), 
 		new Pin(1, 4, PinType.UNDER_6), 
-		new Pin(4, 4, PinType.NORMAL),
-		new Pin(5, 4, PinType.NORMAL), 
-		new Pin(7, 4, PinType.NORMAL), 
-		new Pin(8, 4, PinType.NORMAL),
+		new Pin(4, 4, PinType.TR_BASE),
+		new Pin(5, 4, PinType.TR_EMITTER), 
+		new Pin(7, 4, PinType.TR_EMITTER), 
+		new Pin(8, 4, PinType.TR_BASE),
 		new Pin(1, 6, PinType.UNDER_7), 
-		new Pin(4, 7, PinType.NORMAL), 
+		new Pin(4, 7, PinType.TR_BASE), 
 		new Pin(7, 7, PinType.CS_EMITTER_1),
 		new Pin(8, 7, PinType.CS_EMITTER_2), 
 		new Pin(9, 7, PinType.CS_EMITTER_3), 
 		new Pin(7, 8, PinType.CS_EMITTER_4),
 		new Pin(8, 8, PinType.CS_EMITTER_5), 
 		new Pin(9, 8, PinType.CS_EMITTER_6), 
-		new Pin(12, 7, PinType.NORMAL),
+		new Pin(12, 7, PinType.RES),
 		new Pin(1, 8, PinType.UNDER_8), 
-		new Pin(4, 8, PinType.NORMAL), 
+		new Pin(4, 8, PinType.TR_EMITTER), 
 		new Pin(12, 8, PinType.VSS),
 		new Pin(7, 9, PinType.CS_BASE_1), 
 		new Pin(8, 9, PinType.CS_BASE_2), 
 		new Pin(9, 9, PinType.CS_BASE_3),
-		new Pin(12, 9, PinType.NORMAL), 
+		new Pin(12, 9, PinType.RES), 
 		new Pin(1, 10, PinType.UNDER_9), 
-		new Pin(4, 10, PinType.NORMAL),
+		new Pin(4, 10, PinType.TR_EMITTER),
 		new Pin(7, 10, PinType.CS_COLLECTOR_1), 
 		new Pin(8, 10, PinType.CS_COLLECTOR_2), 
 		new Pin(9, 10, PinType.CS_COLLECTOR_3),
-		new Pin(4, 11, PinType.NORMAL), 
+		new Pin(4, 11, PinType.TR_BASE), 
 		new Pin(7, 11, PinType.CS_GND_1), 
 		new Pin(8, 11, PinType.CS_GND_2),
 		new Pin(9, 11, PinType.CS_GND_3), 
 		new Pin(11, 12, PinType.VSS), 
 		new Pin(4, 13, PinType.UNDER_10),
 		new Pin(6, 13, PinType.UNDER_11), 
-		new Pin(8, 13, PinType.NORMAL), 
-		new Pin(12, 13, PinType.NORMAL)
+		new Pin(8, 13, PinType.RES), 
+		new Pin(12, 13, PinType.RES)
 	};
 
 	
@@ -367,7 +359,7 @@ public class Process {
 
 	public void extract(String name, File srcFile, File dstFile) throws IOException {
 
-		CellMatcher matcher = new CellMatcher(CELL_SIZE + 1, 4, 5, 15, MATCH_DELTA, BLANK_THRESH, CONNECT_THRESH);
+		CellMatcher matcher = new CellMatcher(CELL_SIZE + 1, 4, 5, 15, MATCH_DELTA);
 
 		System.out.println("# Reading image " + srcFile);
 		BufferedImage image = ImageIO.read(srcFile);
@@ -389,9 +381,6 @@ public class Process {
 		double[] reference = new Stats(window).normalize();
 
 		Cell[][] cells = initGrid(w, h, pixels, reference);
-		
-		// Make a copy of the original grid so it can be restored later
-		// Cell[][] originalGrid = cloneCells(cells);
 		
 		optimizeGrid(cells, pixels, CELL_SIZE, SEARCH_THRESH, reference, GRID_DELTA, GRID_RECENTER);
 
@@ -454,30 +443,31 @@ public class Process {
 		ret = fixBridgedPairs(cellsOut7, cellsOut8);
 		System.out.println("# Fixed Bridged Pairs corrected = " + ret);
 
-		ret = drcConnections(cellsOut8, null);
+		Cell[][] cellsOut9 = new Cell[cells.length][cells[0].length];
+		ret = drcConnections(cellsOut8, cellsOut9);
 		System.out.println("# Final DRC Connections Count = " + ret);
 
-		ret = drcDangling(cellsOut8, null);
+		Cell[][] cellsOut10 = new Cell[cells.length][cells[0].length];
+		ret = drcDangling(cellsOut9, cellsOut10);
 		System.out.println("# Final DRC Dangle Count = " + ret);
 
-		ret = drcBridge(cellsOut8, null);
+		Cell[][] cellsOut11 = new Cell[cells.length][cells[0].length];
+		ret = drcBridge(cellsOut10, cellsOut11);
 		System.out.println("# Final DRC Bridge Count = " + ret);
 
-		// Restore the original grid so the output looks aligned
-		// Sometimes useful to comment this out for debugging
-		// copyGrid(originalGrid, cellsOut8);
+		Cell[][] cellsLast = cellsOut11;
 
 		System.out.println("# Writing Json");
         GsonBuilder builder = new GsonBuilder();
         builder.setPrettyPrinting().serializeNulls();
         Gson gson = builder.create();
         FileWriter writer = new FileWriter(new File("cells_"+ name + ".json"));
-        gson.toJson(cellsOut8, writer);
+        gson.toJson(cellsLast, writer);
         writer.close();
 		
 		if (OUTPUT_ANNOTATED_PNG) {
 			System.out.println("# Annotating PNG");
-			annotateImage(image, cellsOut8);
+			annotateImage(image, cellsLast);
 			System.out.println("# Writing PNG");
 			ImageIO.write(image, "png", dstFile);
 		}
@@ -642,9 +632,14 @@ public class Process {
 			for (int yi = 0; yi < 11; yi++) {
 				int cellx = blockCell.getX() + 15 * xi; 
 				int celly = blockCell.getY() + 15 * yi;
-				// The connection between RCS and RLB has a habbit of shorting
+				// The connection between RCS and RLB has a habit of shorting
 				// this should only be connected to VS....
-				if (cells[celly + 12][cellx + 11].isBottom() && cells[celly + 13][cellx + 12].isLeft()) {
+				if ((cells[celly + 12][cellx + 11].isBottom() && !cells[celly + 12][cellx + 11].isTop()) || 
+					(cells[celly + 13][cellx + 12].isLeft() && !cells[celly + 13][cellx + 12].isRight())) {
+					cells[celly + 12][cellx + 11].setBottom();
+					cells[celly + 13][cellx + 12].setLeft();
+					cells[celly + 13][cellx + 11].setTop();
+					cells[celly + 13][cellx + 11].setRight();
 					if (cells[celly + 13][cellx + 11].isBottom()) {
 						cells[celly + 13][cellx + 11].clearBottom();
 						cells[celly + 13][cellx + 11].setHighlight(true);
@@ -806,6 +801,10 @@ public class Process {
 				// DRC - flag cells than need manual checking
 				if (cell.isHighlight()) {
 					Pin.rectangle(image, x1, y1, w, h, Pin.YELLOW, true);
+				}
+
+				if (cell.isDangleFail()) {
+					Pin.rectangle(image, x1, y1, w, h, Pin.MAGENTA, true);
 				}
 
 			}
@@ -983,16 +982,17 @@ public class Process {
 			copyBlock(blocks.get(i), array, blockOrigins.get(i).getX(), blockOrigins.get(i).getY());
 		}
 
-		
+		// Trace the connections, taking account of underpasses, power and ground
 		traceConnections(array);
-		
-		Map<Integer, String> nameMap = buildNameMap(array, w, h);
-		
-		dumpCells(array, nameMap, true);
+
+		// Build mapping of external pin name to internal net numbers
+		Map<Integer, String> nameMap = buildNameMap(array);
 
 		// Output the components in each block
-		generateNetlist(blocks, blockOrigins, cellOffsets, array);
-		
+		generateNetlist(blocks, blockOrigins, cellOffsets, array, nameMap);
+
+		dumpCells(array, nameMap, true);
+
 	}
 
 	private Cell[][] parseBlock(File blockFile) throws IOException {
@@ -1014,9 +1014,64 @@ public class Process {
 		}
 	}
 
-
 	private void traceConnections(Cell[][] array) {
-		// First trace the power and ground nets
+		tracePowerConnections(array);
+		validatePowerConnections(array);
+		traceNormalConnections(array);
+	}
+
+	private void traceNormalConnections(Cell[][] array) {
+		int net = NET_NORMAL;
+		for (int y = 0; y < array.length; y++) {
+			for (int x = 0; x < array[y].length; x++) {
+				Cell cell = array[y][x];
+				// Start at a connected pin that hasn't been labeled with a net
+				if (cell.getNet() == 0 && cell.getType() != null && cell.getType() != PinType.NONE && cell.getConnections() > 0) {
+					traceConnections(array, x, y, net++);
+				}
+			}
+		}
+	}
+
+	private void validatePowerConnections(Cell[][] array) {
+		for (int y = 0; y < array.length; y++) {
+			for (int x = 0; x < array[y].length; x++) {
+				Cell cell = array[y][x];
+				if (cell.getPin() != null && cell.getPin().isLink()) {
+					// If either GND or VSS in on any of the array block links, this is most likely incorrect
+					if (cell.getNet() == NET_GND) {
+						System.err.println("Unexpected GND on link at " + x + "," + y);
+					}
+					if (cell.getNet() == NET_VSS) {
+						System.err.println("Unexpected VSS on link at " + x + "," + y);
+					}
+				}
+				if (cell.getPin() != null && cell.getPin().isTransistor()) {
+					if (cell.getNet() == NET_GND) {
+						System.err.println("Unexpected GND on transistor at " + x + "," + y);
+					}
+					if (cell.getNet() == NET_VSS) {
+						System.err.println("Unexpected VSS on transistor at " + x + "," + y);
+					}					
+				}
+				if (cell.getPin() != null && cell.getPin().isCurrentSource()) {
+					if (cell.getNet() == NET_GND) {
+						System.err.println("Unexpected GND on current source at " + x + "," + y);
+					}
+					if (cell.getNet() == NET_VSS) {
+						System.err.println("Unexpected VSS on current source at " + x + "," + y);
+					}					
+				}
+				if (cell.getPin() != null && cell.getPin().isResistor()) {
+					if (cell.getNet() == NET_GND) {
+						System.err.println("Unexpected GND on resistor at " + x + "," + y);
+					}
+				}
+			}
+		}
+	}
+
+	private void tracePowerConnections(Cell[][] array) {
 		for (int y = 0; y < array.length; y++) {
 			for (int x = 0; x < array[y].length; x++) {
 				Cell cell = array[y][x];
@@ -1025,17 +1080,6 @@ public class Process {
 				}
 				if (cell.getPin() != null && cell.getPin().isVss()) {
 					traceConnections(array, x, y, NET_VSS);
-				}
-			}
-		}
-		// Then trace the remainder
-		int net = 1;
-		for (int y = 0; y < array.length; y++) {
-			for (int x = 0; x < array[y].length; x++) {
-				Cell cell = array[y][x];
-				// Start at a connected pin that hasn't been labeled with a net
-				if (cell.getNet() == 0 && cell.getType() != null && cell.getType() != PinType.NONE && cell.getConnections() > 0) {
-					traceConnections(array, x, y, net++);
 				}
 			}
 		}
@@ -1067,12 +1111,12 @@ public class Process {
 		}
 	}
 	
-	private Map<Integer, String> buildNameMap(Cell[][] array, int w, int h) {
+	private Map<Integer, String> buildNameMap(Cell[][] array) {
 		Map<Integer, String> nameMap = new HashMap<Integer, String>();
 		nameMap.put(NET_GND, "GND");
-		nameMap.put(NET_VSS, "VS");
-		for (int y = 0; y < h; y++) {
-			for (int x = 0; x < w; x++) {
+		nameMap.put(NET_VSS, "VSS");
+		for (int y = 0; y < array.length; y++) {
+			for (int x = 0; x < array[y].length; x++) {
 				Cell cell = array[y][x];
 				if (cell.getType() == PinType.IO) {
 					String name = cell.getPin().getName();
@@ -1090,13 +1134,10 @@ public class Process {
 		return nameMap;
 	}
 	
-	private void generateNetlist(List<Cell[][]> blocks, List<XY> blockOrigins, List<XY> cellOffsets, Cell[][] array) {
+	private void generateNetlist(List<Cell[][]> blocks, List<XY> blockOrigins, List<XY> cellOffsets, Cell[][] array, Map<Integer, String> nameMap) {
 		for (int i = 0; i < blocks.size(); i++) {
-			System.out.println("Outputting components in block " + i);
 			XY blockOrigin = blockOrigins.get(i);
 			XY cellOffset = cellOffsets.get(i);
-			System.out.println("Block origin = " + blockOrigin);
-			System.out.println("Cell Offset = " + cellOffset);
 			for (int xi = 0; xi < 10; xi++) {
 				for (int yi = 0; yi < 11; yi++) {
 					int cellx = blockOrigin.getX() + xi * 15 + cellOffset.getX();
@@ -1105,24 +1146,24 @@ public class Process {
 					String id = "B" + (i % 3) + (i / 3) + "_C" + Integer.toHexString(xi) + Integer.toHexString(yi);
 					
 					// Emitter, Base, Collector
-					outputComponent(array, cellx, celly, "TR", id + "_T1", new XY(7, 4), new XY(8, 4), new XY(6, 1));
-					outputComponent(array, cellx, celly, "TR", id + "_T2", new XY(5, 4), new XY(4, 4), new XY(6, 1));
-					outputComponent(array, cellx, celly, "TR", id + "_T3", new XY(4, 8), new XY(4, 7), new XY(1, 8));
-					outputComponent(array, cellx, celly, "TR", id + "_T4", new XY(4, 10), new XY(4, 11), new XY(1, 8));
+					outputComponent(nameMap, array, cellx, celly, "TR", id + "_T1", new XY(7, 4), new XY(8, 4), new XY(6, 1));
+					outputComponent(nameMap, array, cellx, celly, "TR", id + "_T2", new XY(5, 4), new XY(4, 4), new XY(6, 1));
+					outputComponent(nameMap, array, cellx, celly, "TR", id + "_T3", new XY(4, 8), new XY(4, 7), new XY(1, 8));
+					outputComponent(nameMap, array, cellx, celly, "TR", id + "_T4", new XY(4, 10), new XY(4, 11), new XY(1, 8));
 					
 					// Emitter1, Emitter2, Base, Collector
-					outputComponent(array, cellx, celly, "CS", id, new XY(7, 8), new XY(9, 8), new XY(8, 9), new XY(8, 10));
+					outputComponent(nameMap, array, cellx, celly, "CS", id, new XY(7, 8), new XY(9, 8), new XY(8, 9), new XY(8, 10));
 
 					// Resistors
-					outputComponent(array, cellx, celly, "R", id + "_RLA", new XY(12, 3), new XY(12, 7));
-					outputComponent(array, cellx, celly, "R", id + "_RCS", new XY(12, 9), new XY(12, 13));
-					outputComponent(array, cellx, celly, "R", id + "_RLB", new XY(8, 13), new XY(12, 13));
+					outputComponent(nameMap, array, cellx, celly, "RES", id + "_RLA", new XY(12, 3), new XY(12, 7));
+					outputComponent(nameMap, array, cellx, celly, "RES", id + "_RCS", new XY(12, 9), new XY(12, 13));
+					outputComponent(nameMap, array, cellx, celly, "RES", id + "_RLB", new XY(8, 13), new XY(12, 13));
 				}
 			}
 		}
 	}
 
-	private void outputComponent(Cell[][] array, int cellx, int celly, String type, String id, XY... pins) {
+	private void outputComponent(Map<Integer, String> nameMap, Cell[][] array, int cellx, int celly, String type, String id, XY... pins) {
 		String component = type + " " + id + "(";
 		boolean first = true;
 		boolean allUsed = true;
@@ -1138,14 +1179,25 @@ public class Process {
 				component += ", ";
 			}
 			int net = cell.getNet();
-			allUsed &= net > 0;
-			if (net == NET_VSS) {
-				component += "VS";
-			} else if (net == NET_GND) {
-				component += "GND";
-			} else {
-				component += "N" + cell.getNet();
+			
+			if (type.equals("TR") || (type.equals("CS") && i < 2)) {
+				if (net == NET_VSS) {
+					System.err.println("Component " + type + " " + id + " has an unexpected short to VSS on pin " + i);
+				}
 			}
+				
+			if ((!type.equals("CS") || i == 2)) {
+				if (net == NET_GND) {
+					System.err.println("Component " + type + " " + id + " has an unexpected short to GND on pin " + i);
+				}
+			}
+			
+			allUsed &= net > 0;
+			String netName = nameMap.get(net);
+			if (netName == null) {
+				netName = "N" + net;
+			}
+			component += netName;
 			first = false;
 		}
 		component += ");";

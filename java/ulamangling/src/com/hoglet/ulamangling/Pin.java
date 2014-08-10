@@ -15,7 +15,9 @@ public class Pin extends XY {
 	
 	public enum PinType {
 		NONE,
-		NORMAL,
+		RES,
+		TR_EMITTER,
+		TR_BASE,
 		IO,
 		LINK_L,
 		LINK_R,
@@ -78,6 +80,27 @@ public class Pin extends XY {
 	
 	public boolean isGnd() {
 		return type == PinType.CS_GND_1 || type == PinType.CS_GND_2 ||  type == PinType.CS_GND_3; 
+	}
+
+	public boolean isLink() {
+		return type == PinType.LINK_L || type == PinType.LINK_R ||
+			   type == PinType.LINK_T || type == PinType.LINK_B ; 
+	}
+
+	public boolean isResistor() {
+		return type == PinType.RES;
+	}
+	
+	public boolean isTransistor() {
+		return type == PinType.TR_BASE || type == PinType.TR_EMITTER ||
+				type == PinType.UNDER_2 || type == PinType.UNDER_5 || type == PinType.UNDER_7 ||
+				type == PinType.UNDER_8 || type == PinType.UNDER_11;
+	}
+
+	public boolean isCurrentSource() {
+		return type == PinType.CS_EMITTER_1 || type == PinType.CS_EMITTER_1 || type == PinType.CS_EMITTER_1 ||
+				type == PinType.CS_EMITTER_4 || type == PinType.CS_EMITTER_5 || type == PinType.CS_EMITTER_6 ||
+				type == PinType.CS_BASE_1 || type == PinType.CS_BASE_2 || type == PinType.CS_BASE_3;
 	}
 
 	public void plot(BufferedImage image, int px, int py, int w, int h, int rgb) {
@@ -164,8 +187,8 @@ public class Pin extends XY {
 	
 	public String toString() {
 		switch (type) {
-		case NORMAL:
-			return "X";
+		case RES:
+			return "R";
 		case IO:
 			return "I";
 		case LINK_L:
@@ -190,10 +213,12 @@ public class Pin extends XY {
 			return "U";
 		case VSS:
 			return "1";
+		case TR_BASE:
 		case CS_BASE_1:
 		case CS_BASE_2:
 		case CS_BASE_3:
 			return "B";
+		case TR_EMITTER:
 		case CS_EMITTER_1:
 		case CS_EMITTER_2:
 		case CS_EMITTER_3:

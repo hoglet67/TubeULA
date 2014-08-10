@@ -12,8 +12,6 @@ public class CellMatcher {
 	private int l;
 	private int csEmitter;
 	private int delta;
-	private int blankThreshold;
-	private int connectThreshold;
 
 	private List<Pattern> patterns = new ArrayList<Pattern>();
 	private List<Pattern> patternsPlusPins = new ArrayList<Pattern>();
@@ -23,14 +21,12 @@ public class CellMatcher {
 		INIT, ZERO, HALF, ONE,
 	};
 
-	public CellMatcher(int dimension, int line, int corner, int csEmitter, int delta, int blankThreshold, int connectThreshold) {
+	public CellMatcher(int dimension, int line, int corner, int csEmitter, int delta) {
 		this.d = dimension;
 		this.l = line;
 		this.c = corner;
 		this.csEmitter = csEmitter;
 		this.delta = delta;
-		this.blankThreshold = blankThreshold;
-		this.connectThreshold = connectThreshold;
 		initializePatterns();
 		dumpPatterns(patterns);
 		dumpPatterns(patternsPlusPins);
@@ -246,64 +242,6 @@ public class CellMatcher {
 			}
 		}
 	}
-
-	
-	public void edgeMatch(Cell cell, int[][] pixels) {
-
-		int x1 = cell.getX1();
-		int x2 = cell.getX2();
-		int y1 = cell.getY1();
-		int y2 = cell.getY2();
-		int top = 0;
-		int left = 0;
-		int right = 0;
-		int bottom = 0;
-
-		int total = 0;
-		for (int x = x1; x <= x2; x++) {
-			for (int y = y1; y <= y2; y++) {
-				if ((pixels[y][x] & 0xff0000) < 128) {
-					total++;
-				}
-			}
-		}
-
-		if (total < blankThreshold) {
-			return;
-		}
-
-		for (int line = -1; line <= 1; line++) {
-			for (int x = x1; x <= x2; x++) {
-				if ((pixels[y1 + line][x] & 0xff0000) < 128) {
-					top++;
-				}
-				if ((pixels[y2 - line][x] & 0xff0000) < 128) {
-					bottom++;
-				}
-			}
-			for (int y = y1; y <= y2; y++) {
-				if ((pixels[y][x1 + line] & 0xff0000) < 128) {
-					left++;
-				}
-				if ((pixels[y][x2 - line] & 0xff0000) < 128) {
-					right++;
-				}
-			}
-		}
-		
-		if (top > connectThreshold) {
-			cell.setTop();
-		}
-		if (bottom > connectThreshold) {
-			cell.setBottom();
-		}
-		if (left > connectThreshold) {
-			cell.setLeft();
-		}
-		if (right > connectThreshold) {
-			cell.setRight();
-		}
-	}
 			
 	public void match(Cell cell, int[][] pixels) {
 
@@ -318,6 +256,9 @@ public class CellMatcher {
 		int x2 = cell.getX2();
 		int y1 = cell.getY1();
 		int y2 = cell.getY2();
+		
+		boolean ignoreBlack = cell.getType() != null && cell.getType() != PinType.NONE;
+		// cell.getType() == PinType.UNDER_3 || cell.getType() == PinType.UNDER_4 || cell.getType() == PinType.LINK_L || cell.getType() == PinType.LINK_R; 
 		
 		// System.out.println("x1=" + x1 + "; y1=" + y1 + "; x2=" + x2 + "; y2=" + y2);
 		
@@ -399,7 +340,7 @@ public class CellMatcher {
 								totalHalf++;
 								break;
 							case ONE:
-								if (pixel  == 0x0000ff || pixel == 0x000000) {
+								if (pixel  == 0x0000ff || (!ignoreBlack && pixel == 0x000000)) {
 									countOne++;
 								}
 								totalOne++;
