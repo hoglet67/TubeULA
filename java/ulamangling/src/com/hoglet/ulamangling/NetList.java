@@ -3,6 +3,7 @@ package com.hoglet.ulamangling;
 import java.util.Collection;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 public class NetList {
 
@@ -126,15 +127,14 @@ public class NetList {
 				Collection<String> inputs2 = gate2.getInputs();
 				if (inputs2.contains(output1)) {
 					
-					System.out.print("Cross coupled gate pair: "
+					System.out.println("Cross coupled gate pair: "
 							+ output1 + "(" + inputs1.size() + ") and "
-							+ output2 + "(" + inputs2.size() + ") ");
+							+ output2 + "(" + inputs2.size() + ")");
 					crossCoupledCount++;
 
 					// See if we can trace back to a latch
 
-					String gate = null;
-					String data = null;
+					int latchCount = 0;
 					for (String driver1 : inputs1) {
 						if (driver1.equals(output2)) {
 							continue;
@@ -158,41 +158,63 @@ public class NetList {
 							if (driver2inputs.contains(driver1)) {
 								// System.out.println("Found possible driver1: " + driver1 + "(" + driver1inputs + ")");
 								// System.out.println("Found possible driver2: " + driver2 + "(" + driver2inputs + ")");
+								String enable = null;
+								Collection<String> data = new TreeSet<String>();
 								for (String driver1input : driver1inputs) {
 									if (driver2inputs.contains(driver1input)) {
-										if (gate == null) {
-											gate = driver1input;
+										if (enable == null) {
+											enable = driver1input;
 										} else {
 											System.err.println("Multiple clock candidates for " + driver1 + " and " + driver2);
 										}
 									} else {
-										if (data == null) {
-											data = driver1input;
-										} else {
-											System.err.println("Multiple data candidates for " + driver1 + " and " + driver2);
-
-										}
+										data.add(driver1input);
 									}
 								}
-								if (gate != null && data != null) {
-									System.out.println("Found latch: gate=" + gate + "; data=" + data + "; q=" + output1 + "; nq=" + output2);
+								if (enable != null && data.size() > 0) {
+									latchCount++;
+									System.out.println("Found latch: gate=" + enable + "; data=" + data + "; q=" + output1 + "; nq=" + output2);
 									copy.delete(gate1);
 									copy.delete(gate2);
 									copy.delete(gateDriver1);
 									copy.delete(gateDriver2);
+									
+									if (gate1.numInputs() > 2) {
+										System.err.println("WARNING: gate1 has > 2 inputs: " + gate1);
+									}
+									if (gate2.numInputs() > 2) {
+										System.err.println("WARNING: gate2 has > 2 inputs: " + gate2);
+									}
+									if (gateDriver1.numInputs() > 2) {
+										System.err.println("WARNING: gateDriver1 has > 2 inputs: " + gateDriver1);
+									}
+									if (gateDriver2.numInputs() > 2) {
+										System.err.println("WARNING: gateDriver2 has > 2 inputs: " + gateDriver2);
+									}
+									
+									
 									Component latch = copy.createComponent("LATCH", "LATCH" + latchnum++);
-									latch.addInput("D", data);
-									latch.addInput("G", gate);
+									for (String d : data) {
+										latch.addInput("D", d);
+									}
+									latch.addInput("EN", enable);
 									latch.addOutput("Q", output1);
 									latch.addOutput("NQ", output2);
-								}								
+								}
 							}
 						}
+					}
+					if (latchCount == 0) {
+						System.out.println("No latch");
+					} else if (latchCount == 1) {
+						System.out.println();
+					} else {
+						throw new RuntimeException("Multiple latches matched, bailing:" + latchCount);
 					}
 				}
 			}
 		}
-		System.out.println("Found a total of " + crossCoupledCount + " cross coupled gates");
+		System.out.println("Found a total of " + crossCoupledCount / 2 + " cross coupled gates");
 		System.out.println("Found a total of " + latchnum + " latches");
 		return copy;
 	}

@@ -1054,8 +1054,134 @@ public class Process {
 
 		blocks.get(7)[84][106].setConnections(2);
 		blocks.get(7)[85][106].setConnections(10);
+		
+		
+		// Shorts between current sources
 
 		
+		
+
+		
+		blocks.get(8)[12][58].setConnections(3);
+		blocks.get(8)[13][58].setConnections(4);
+
+		blocks.get(8)[119][43].setConnections(9);
+		blocks.get(8)[119][44].setConnections(0);
+		blocks.get(8)[119][45].setConnections(1);
+
+		blocks.get(8)[32][9].setConnections(5);
+		blocks.get(8)[32][10].setConnections(4);
+		
+		blocks.get(5)[117][133].setConnections(3);
+		blocks.get(5)[118][133].setConnections(4);
+
+		blocks.get(7)[14][37].setConnections(3);
+		blocks.get(7)[14][38].setConnections(4);
+
+		XY[][] blockNuke = new XY[][] {
+				// block 00
+				new XY[] {
+					// all correct
+						
+				},
+				// block 10
+				new XY[] {
+					new XY(0, 0),
+					new XY(0, 1),
+					new XY(0, 3),
+					new XY(0, 6),
+					new XY(0, 9),
+					new XY(3, 0),
+					new XY(3, 1),
+					new XY(3, 2),
+					new XY(3, 4),
+					new XY(3, 5),
+					new XY(3, 8),
+					new XY(3, 9),
+					new XY(3, 10),
+					new XY(6, 0),
+					new XY(6, 1),
+					new XY(6, 3),
+					new XY(6, 10)
+				},
+				// block 20
+				new XY[] {
+						
+				},
+				// block 01
+				new XY[] {
+						
+				},
+				// block 11
+				new XY[] {
+					new XY(3, 5),
+					new XY(3, 10),
+					new XY(4, 0),
+					new XY(6, 0)
+				},
+				// block 21
+				new XY[] {
+						
+				},
+				// block 02
+				new XY[] {
+					// all correct
+				},
+				// block 12
+				new XY[] {
+						new XY(0, 1),
+						new XY(0, 2),
+						new XY(0, 4),
+						new XY(0, 5),
+						new XY(0, 6),
+						new XY(0, 7),
+
+						new XY(3, 0),
+						new XY(3, 1),
+						new XY(3, 2),
+						new XY(3, 3),
+						new XY(3, 4),
+						new XY(3, 6),
+						new XY(3, 7),
+						new XY(3, 8),
+						new XY(3, 10),
+						
+						new XY(6, 1),
+						new XY(6, 7),
+
+				},
+				// block 22
+				new XY[] {
+						
+				},
+		};
+		
+		
+
+		for (int i = 0; i < blocks.size(); i++) {
+			Cell[][] block = blocks.get(i);
+			String name = "" + (i % 3) + "" + (i / 3);
+			XY origin = blockCells.get(name);
+			for (XY loc : blockNuke[i]) {
+				block[origin.getY() + 15 * loc.getY() + 8][origin.getX() + 15 * loc.getX() + 7].clearRight();
+				block[origin.getY() + 15 * loc.getY() + 8][origin.getX() + 15 * loc.getX() + 8].clearLeft();
+				block[origin.getY() + 15 * loc.getY() + 8][origin.getX() + 15 * loc.getX() + 8].clearRight();
+				block[origin.getY() + 15 * loc.getY() + 8][origin.getX() + 15 * loc.getX() + 9].clearLeft();
+			}
+			
+		}
+
+		// Non Standard Shorts between current sources
+
+		// B12_C91
+		blocks.get(7)[27][148].setConnections(3);
+		blocks.get(7)[28][148].setConnections(1);
+
+		// Mis Matched emitters and collectors
+		blocks.get(0)[131][160].setConnections(8);
+		blocks.get(0)[131][161].setConnections(5);
+		
+
 		// Extract the width/heights of the blocks
 		int w0 = blocks.get(0)[0].length;
 		int w1 = blocks.get(1)[0].length;;
@@ -1405,9 +1531,12 @@ public class Process {
 
 			// Count the current sources, and warn if there are none
 			int csCount = 0;
+			Collection<String> linkedEmitters = new TreeSet<String>();
 			for (String connection : emitterConnections) {
 				if (connection.startsWith(TYPE_TR)) {
-					if (!connection.endsWith("0")) {
+					if (connection.endsWith("0")) {
+						linkedEmitters.add(connection.substring(0, connection.length() - 2));
+					} else {
 						System.err.println("Warning: Transistor " + trid + " emitter connected to the wrong pin of another transistor: " + connection);
 					}
 				} else if (connection.startsWith(TYPE_CS)) {
@@ -1428,11 +1557,14 @@ public class Process {
 			
 			// Count the load resistors
 			int rlCount = 0;
+			Collection<String> linkedCollectors = new TreeSet<String>();
 			for (String connection : collectorConnections) {
 				if (connection.startsWith(TYPE_TR)) {
 					if (connection.endsWith("0")) {
 						// Emitter
 						System.err.println("Warning: Transistor " + trid + " collector connected to the emitter of another transistor: " + connection);
+					} else if (connection.endsWith("2")) {
+						linkedCollectors.add(connection.substring(0, connection.length() - 2));
 					}
 				} else if (connection.startsWith(TYPE_RL) || connection.startsWith(TYPE_RCS)) {
 					rlCount++;
@@ -1442,6 +1574,12 @@ public class Process {
 			}
 			if (rlCount == 0) {
 				System.err.println("Warning: Transistor " + trid + " collector not connected to any current sources");
+			}
+			
+			if (linkedCollectors.size() != linkedEmitters.size()) {
+				System.out.println("Different numbers of emitters and collectors linked: " + linkedEmitters + " and " + linkedCollectors);
+			} else if (!linkedCollectors.equals(linkedEmitters)) {
+				System.out.println("Different emitters and collectors linked: " + linkedEmitters + " and " + linkedCollectors);
 			}
 		}
 		
