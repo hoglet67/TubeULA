@@ -17,8 +17,6 @@ import java.util.TreeSet;
 
 import javax.imageio.ImageIO;
 
-import org.omg.CORBA.OMGVMCID;
-
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.hoglet.ulamangling.Pin.PinType;
@@ -1370,9 +1368,7 @@ public class Process {
 			System.err.println(entry.getValue().size() + " " + entry.getKey() + " components");
 		}
 
-		// Key is the output net
-		// Value is the input let
-		Map<String, Collection<String>> gateMap = new TreeMap<String, Collection<String>>();
+		NetList netlist = new NetList();
 
 		// Iterate through the transistors
 		for (String trid : componentMap.get(TYPE_TR)) {
@@ -1393,14 +1389,15 @@ public class Process {
 				continue;
 			}
 
-			// Add to the gate map....
-			Collection<String> gateInputs = gateMap.get(collectorNet);
-			if (gateInputs == null) {
-				gateInputs = new TreeSet<String>();
-				gateMap.put(collectorNet, gateInputs);
+			String id = "G" + collectorNet;
+			Component gate  = netlist.get(id);
+			if (gate == null) {
+				gate = netlist.createComponent("NOR", id);
+				gate.addOutput("O", collectorNet);
 			}
-			gateInputs.add(baseNet);
-
+			gate.addInput("I", baseNet);
+			
+			
 			// The rest of the code is flagging possible transistor netlist errors
 			
 			// Follow the emitter connections
@@ -1448,126 +1445,19 @@ public class Process {
 			}
 		}
 		
-		// Output some statistics about the gates found
-		int MAX = 100;
-		int[] gateDist = new int[MAX];
-		for (int i = 0; i < MAX; i++) {
-			gateDist[i] = 0;
-		}
-		for (Map.Entry<String, Collection<String>> gate : gateMap.entrySet()) {
-			gateDist[gate.getValue().size()]++;
-		}
-		for (int i = 0; i < MAX; i++) {
-			if (gateDist[i] > 0) {
-				System.err.println(gateDist[i] + "\t" + i + " input NOR Gates");
-			}
-		}
-		
-		// Output the gates
-
-		for (Map.Entry<String, Collection<String>> gate : gateMap.entrySet()) {
-			String component = gate.getKey();
-			component += " = NOR(";
-			boolean first = true;
-			for (String net : gate.getValue()) {
-				if (first) {
-					first = false;
-				} else {
-					component += ", ";
-				}
-				component += net;
-			}
-			component += ");";
-			System.out.println(component);
-		}
-		
 
 		
-		// Look for gates that feed back to themselves
-		int selfCoupledCount= 0;
-		for (Map.Entry<String, Collection<String>> gate1 : gateMap.entrySet()) {
-			String output1 = gate1.getKey();
-			Collection<String> inputs1 = gate1.getValue();
-			if (inputs1.contains(output1)) {
-				System.out.println("Self coupled gate " + output1);
-				selfCoupledCount++;
-			}
-		}
-		System.out.println("Found a total of " + selfCoupledCount + " self coupled gates");
-		
-		
-		// Look for cross coupled gates
-		int crossCoupledCount = 0;
-		for (Map.Entry<String, Collection<String>> gate1 : gateMap.entrySet()) {
-			String output1 = gate1.getKey();
-			Collection<String> inputs1 = gate1.getValue();
-			if (inputs1.contains(output1)) {
-				System.out.println("Skipping self coupled gate: " + output1);
-				continue;
-			}
-			for (String output2 : inputs1) {
-				Collection<String> inputs2 = gateMap.get(output2);
-				if (inputs2 != null && inputs2.contains(output1)) {
-					
-					System.out.print("Cross coupled gate pair: "
-							+ output1 + "(" + inputs1.size() + ") and "
-							+ output2 + "(" + inputs2.size() + ") ");
-					crossCoupledCount++;
+		netlist.dump();
+		netlist.checkFromSelfCoupledGates();
 
-					// See if we can trace back to a latch
+		NetList copy = netlist.replaceWithLatches();
+		copy.dump();
 
-					String gate = null;
-					String data = null;
-					for (String driver1 : inputs1) {
-						if (driver1.equals(output2)) {
-							continue;
-						}
-						Collection<String> driver1inputs = gateMap.get(driver1);
-						if (driver1inputs == null) {
-							System.err.println("No driver for " + driver1);
-							continue;
-						}
-						for (String driver2 : inputs2) {
-							if (driver2.equals(output1)) {
-								continue;
-							}
-							Collection<String> driver2inputs = gateMap.get(driver2);
-							if (driver2inputs == null) {
-								System.err.println("No driver for " + driver2);
-								continue;
-							}
-							if (driver2inputs.contains(driver1)) {
-								// System.out.println("Found possible driver1: " + driver1 + "(" + driver1inputs + ")");
-								// System.out.println("Found possible driver2: " + driver2 + "(" + driver2inputs + ")");
-								for (String driver1input : driver1inputs) {
-									if (driver2inputs.contains(driver1input)) {
-										if (gate == null) {
-											gate = driver1input;
-										} else {
-											System.err.println("Multiple clock candidates for " + driver1 + " and " + driver2);
-										}
-									} else {
-										if (data == null) {
-											data = driver1input;
-										} else {
-											System.out.println("Multiple data candidates for " + driver1 + " and " + driver2);
+		System.out.println("**** Gate Level Netlist ****");
+		netlist.dumpStats();
 
-										}
-									}
-								}
-							}
-						}
-						if (gate != null && data != null) {
-							System.out.println("Found latch: gate=" + gate + "; data=" + data + "; q=" + output1 + "; nq=" + output2);
-						} else {
-							System.out.println("No latch");
-						}
-					}
-				}
-			}
-		}
-		crossCoupledCount = (crossCoupledCount - selfCoupledCount) / 2;
-		System.out.println("Found a total of " + crossCoupledCount + " cross coupled gates");
+		System.out.println("**** Latch Level Netlist ****");
+		copy.dumpStats();
 	}
 	
 	@SuppressWarnings("unused")
