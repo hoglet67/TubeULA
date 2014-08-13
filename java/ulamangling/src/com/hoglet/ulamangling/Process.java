@@ -8,11 +8,16 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 import javax.imageio.ImageIO;
+
+import org.omg.CORBA.OMGVMCID;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -22,7 +27,17 @@ public class Process {
 
 	private static final int NET_VSS  = 1;
 	private static final int NET_GND = 2;
+
+	private static final String NAME_VSS  = "VSS";
+	private static final String NAME_GND = "GND";
+
+	private static final String[] POWER_NETS = new String[] { NAME_GND, NAME_VSS };
 	private static final int NET_NORMAL = 3;
+	
+	private static final String TYPE_TR = "TR";
+	private static final String TYPE_CS = "CS";
+	private static final String TYPE_RL = "RL";
+	private static final String TYPE_RCS = "RCS";
 	
 	// Whether to output annotated PNG
 	public static final boolean OUTPUT_ANNOTATED_PNG = true;
@@ -192,7 +207,7 @@ public class Process {
 		endCells.put("02", new XY(162, 172));
 		ioPinLists.put("02", new Pin[] {
 				new Pin(5, 34, "PD3OUT"),
-				new Pin(5, 65, "PD3OUT"),
+				new Pin(5, 65, "PD2OUT"),
 				new Pin(5, 76, "PD2IN"),
 				new Pin(5, 127, "PD1OUT"),
 				new Pin(5, 148, "PD1IN"),
@@ -290,8 +305,20 @@ public class Process {
 		new Pin(12, 13, PinType.RES)
 	};
 
+
+	// Maps Integer Net Number to Net Name
+	private Map<Integer, String> numberToNameMap;
 	
+	// Maps Net Name to List<Pin> where pin is <Type>_<ID>_<Num>
+	private Map<String, Collection<String>> nameToPinMap;
 	
+	// Maps Component Pin to Net Name
+	private Map<String, String> pinToNameMap;
+
+	// Contains names of each type of component
+	private Map<String, Collection<String>> componentMap;
+	
+
 	public Process() {
 	}
 
@@ -942,8 +969,95 @@ public class Process {
 		blocks.add(parseBlock(new File(blockBase + "_02.json")));
 		blocks.add(parseBlock(new File(blockBase + "_12.json")));
 		blocks.add(parseBlock(new File(blockBase + "_22.json")));
+		
+		// Fix shorts to VSS
 
+		blocks.get(1)[35][152].setConnections(0);
+		blocks.get(1)[36][152].setConnections(6);
+		blocks.get(1)[37][152].setConnections(5);
+		blocks.get(1)[38][152].setConnections(5);
 
+		blocks.get(1)[96][153].setConnections(8);
+		blocks.get(1)[97][153].setConnections(10);
+
+		blocks.get(1)[52][39].setConnections(15);
+		blocks.get(1)[53][39].setConnections(5);
+		blocks.get(1)[54][39].setConnections(3);
+		
+		blocks.get(6)[108][48].setConnections(5);
+		blocks.get(6)[108][49].setConnections(4);
+
+		blocks.get(6)[108][93].setConnections(5);
+		blocks.get(6)[108][94].setConnections(4);
+
+		blocks.get(6)[14][50].setConnections(1);
+		blocks.get(6)[15][50].setConnections(8);
+
+		blocks.get(6)[74][110].setConnections(1);
+		blocks.get(6)[75][110].setConnections(8);
+
+		blocks.get(7)[123][121].setConnections(5);
+		blocks.get(7)[123][122].setConnections(4);
+		
+		blocks.get(8)[93][92].setConnections(0);
+		blocks.get(8)[94][92].setConnections(0);
+		blocks.get(8)[95][92].setConnections(10);
+
+		blocks.get(8)[93][107].setConnections(0);
+		blocks.get(8)[94][107].setConnections(0);
+		blocks.get(8)[95][107].setConnections(10);
+
+		blocks.get(8)[138][92].setConnections(0);
+		blocks.get(8)[139][92].setConnections(0);
+		blocks.get(8)[140][92].setConnections(10);
+
+		blocks.get(8)[138][107].setConnections(0);
+		blocks.get(8)[139][107].setConnections(0);
+		blocks.get(8)[140][107].setConnections(10);
+
+		blocks.get(8)[108][136].setConnections(5);
+		blocks.get(8)[108][137].setConnections(4);
+		
+		// Fix emitter not connected to current source
+		
+		blocks.get(3)[119][14].setConnections(7);
+		blocks.get(3)[119][15].setConnections(11);
+
+		blocks.get(6)[134][14].setConnections(7);
+		blocks.get(6)[134][15].setConnections(11);
+		
+		// Connected to something unexpected
+		
+		blocks.get(1)[119][73].setConnections(10);
+		blocks.get(1)[120][73].setConnections(4);
+
+		// Danling
+		
+		blocks.get(2)[127][93].setConnections(0);
+		blocks.get(2)[127][94].setConnections(5);
+		blocks.get(2)[127][96].setConnections(0);
+		blocks.get(2)[127][97].setConnections(5);
+		blocks.get(2)[128][96].setConnections(6);
+		blocks.get(2)[128][97].setConnections(9);
+		
+		// Self Coupled Gates
+		
+		blocks.get(1)[146][15].setConnections(5);
+		blocks.get(1)[146][16].setConnections(2);
+
+		blocks.get(7)[84][16].setConnections(2);
+		blocks.get(7)[85][16].setConnections(10);
+
+		blocks.get(7)[84][46].setConnections(2);
+		blocks.get(7)[85][46].setConnections(10);
+
+		blocks.get(7)[84][76].setConnections(2);
+		blocks.get(7)[85][76].setConnections(10);
+
+		blocks.get(7)[84][106].setConnections(2);
+		blocks.get(7)[85][106].setConnections(10);
+
+		
 		// Extract the width/heights of the blocks
 		int w0 = blocks.get(0)[0].length;
 		int w1 = blocks.get(1)[0].length;;
@@ -986,17 +1100,20 @@ public class Process {
 		traceConnections(array);
 
 		// Build mapping of external pin name to internal net numbers
-		Map<Integer, String> nameMap = buildNameMap(array);
+		numberToNameMap = buildNameMap(array);
 
-		// Output the components in each block
-		generateNetlist(blocks, blockOrigins, cellOffsets, array, nameMap);
+		// Add the components in each block
+		generateTransistorNetlist(blocks, blockOrigins, cellOffsets, array);
+		
+		// Transform the netlist from transistors to gates
+		transformToGates();
+		
 
-		dumpCells(array, nameMap, true);
+		// dumpCells(array, true);
 
 	}
 
 	private Cell[][] parseBlock(File blockFile) throws IOException {
-		System.out.println("Reading " + blockFile);
 		GsonBuilder builder = new GsonBuilder();
 		builder.setPrettyPrinting().serializeNulls();
 		Gson gson = builder.create();
@@ -1112,9 +1229,9 @@ public class Process {
 	}
 	
 	private Map<Integer, String> buildNameMap(Cell[][] array) {
-		Map<Integer, String> nameMap = new HashMap<Integer, String>();
-		nameMap.put(NET_GND, "GND");
-		nameMap.put(NET_VSS, "VSS");
+		Map<Integer, String> nameMap = new TreeMap<Integer, String>();
+		nameMap.put(NET_GND, NAME_GND);
+		nameMap.put(NET_VSS, NAME_VSS);
 		for (int y = 0; y < array.length; y++) {
 			for (int x = 0; x < array[y].length; x++) {
 				Cell cell = array[y][x];
@@ -1134,7 +1251,10 @@ public class Process {
 		return nameMap;
 	}
 	
-	private void generateNetlist(List<Cell[][]> blocks, List<XY> blockOrigins, List<XY> cellOffsets, Cell[][] array, Map<Integer, String> nameMap) {
+	private void generateTransistorNetlist(List<Cell[][]> blocks, List<XY> blockOrigins, List<XY> cellOffsets, Cell[][] array) {
+		nameToPinMap = new HashMap<String, Collection<String>>();
+		pinToNameMap = new HashMap<String, String>();
+		componentMap = new HashMap<String, Collection<String>>();
 		for (int i = 0; i < blocks.size(); i++) {
 			XY blockOrigin = blockOrigins.get(i);
 			XY cellOffset = cellOffsets.get(i);
@@ -1146,27 +1266,38 @@ public class Process {
 					String id = "B" + (i % 3) + (i / 3) + "_C" + Integer.toHexString(xi) + Integer.toHexString(yi);
 					
 					// Emitter, Base, Collector
-					outputComponent(nameMap, array, cellx, celly, "TR", id + "_T1", new XY(7, 4), new XY(8, 4), new XY(6, 1));
-					outputComponent(nameMap, array, cellx, celly, "TR", id + "_T2", new XY(5, 4), new XY(4, 4), new XY(6, 1));
-					outputComponent(nameMap, array, cellx, celly, "TR", id + "_T3", new XY(4, 8), new XY(4, 7), new XY(1, 8));
-					outputComponent(nameMap, array, cellx, celly, "TR", id + "_T4", new XY(4, 10), new XY(4, 11), new XY(1, 8));
+					addComponent(array, cellx, celly, TYPE_TR, id + "_T1", new XY(7, 4), new XY(8, 4), new XY(6, 1));
+					addComponent(array, cellx, celly, TYPE_TR, id + "_T2", new XY(5, 4), new XY(4, 4), new XY(6, 1));
+					addComponent(array, cellx, celly, TYPE_TR, id + "_T3", new XY(4, 8), new XY(4, 7), new XY(1, 8));
+					addComponent(array, cellx, celly, TYPE_TR, id + "_T4", new XY(4, 10), new XY(4, 11), new XY(1, 8));
 					
 					// Emitter1, Emitter2, Base, Collector
-					outputComponent(nameMap, array, cellx, celly, "CS", id, new XY(7, 8), new XY(9, 8), new XY(8, 9), new XY(8, 10));
+					addComponent(array, cellx, celly, TYPE_CS, id, new XY(7, 8), new XY(9, 8), new XY(8, 9), new XY(8, 10));
 
 					// Resistors
-					outputComponent(nameMap, array, cellx, celly, "RES", id + "_RLA", new XY(12, 3), new XY(12, 7));
-					outputComponent(nameMap, array, cellx, celly, "RES", id + "_RCS", new XY(12, 9), new XY(12, 13));
-					outputComponent(nameMap, array, cellx, celly, "RES", id + "_RLB", new XY(8, 13), new XY(12, 13));
+					addComponent(array, cellx, celly, TYPE_RL, id + "_RLA", new XY(12, 3), new XY(12, 7));
+					addComponent(array, cellx, celly, TYPE_RCS, id + "_RCS", new XY(12, 9), new XY(12, 13));
+					addComponent(array, cellx, celly, TYPE_RL, id + "_RLB", new XY(8, 13), new XY(12, 13));
 				}
 			}
 		}
 	}
 
-	private void outputComponent(Map<Integer, String> nameMap, Cell[][] array, int cellx, int celly, String type, String id, XY... pins) {
+	private void addComponent(Cell[][] array, int cellx, int celly, String type, String id, XY... pins) {
 		String component = type + " " + id + "(";
 		boolean first = true;
+
+		// First, make sure all pins are properly used
 		boolean allUsed = true;
+		for (int i = 0; i < pins.length; i++) {
+			XY loc = pins[i];
+			int x = cellx + loc.getX();
+			int y = celly + loc.getY();
+			Cell cell = array[y][x];
+			int net = cell.getNet();
+			allUsed &= net > 0;
+		}
+
 		for (int i = 0; i < pins.length; i++) {
 			XY loc = pins[i];
 			int x = cellx + loc.getX();
@@ -1179,28 +1310,52 @@ public class Process {
 				component += ", ";
 			}
 			int net = cell.getNet();
-			
-			if (type.equals("TR") || (type.equals("CS") && i < 2)) {
+
+			if (type.equals(TYPE_TR) || (type.equals(TYPE_CS) && i < 2)) {
 				if (net == NET_VSS) {
 					System.err.println("Component " + type + " " + id + " has an unexpected short to VSS on pin " + i);
 				}
 			}
-				
-			if ((!type.equals("CS") || i == 2)) {
+
+			if ((!type.equals(TYPE_CS) || i == 2)) {
 				if (net == NET_GND) {
 					System.err.println("Component " + type + " " + id + " has an unexpected short to GND on pin " + i);
 				}
 			}
-			
-			allUsed &= net > 0;
-			String netName = nameMap.get(net);
+
+			String netName = numberToNameMap.get(net);
 			if (netName == null) {
 				netName = "N" + net;
 			}
 			component += netName;
 			first = false;
+
+			if (allUsed) {
+				// Add the component
+				Collection<String> componentList = componentMap.get(type);
+				if (componentList == null) {
+					// First time this type of component has been encountered
+					componentList = new TreeSet<String>();
+					componentMap.put(type, componentList);
+				}
+				componentList.add(id);
+	
+				// Add the pin -> netName to the first map
+				String pin = type + "_" + id + "_" + i;
+				pinToNameMap.put(pin, netName);
+	
+				// Append the pin to the collection in the netName -> pin maps
+				Collection<String> pinList = nameToPinMap.get(netName);
+				if (pinList == null) {
+					// First time this net has been encountered
+					pinList = new TreeSet<String>();
+					nameToPinMap.put(netName, pinList);
+				}
+				pinList.add(pin);
+			}
 		}
 		component += ");";
+
 		if (allUsed) {
 			System.out.println(component);
 		} else {
@@ -1208,7 +1363,215 @@ public class Process {
 		}
 	}
 	
-	private void dumpCells(Cell[][] cells, Map<Integer, String> nameMap, boolean nets) {
+	private void transformToGates() {
+		System.err.println(nameToPinMap.size() + " nets");
+		System.err.println(pinToNameMap.size() + " pins");
+		for (Map.Entry<String, Collection<String>> entry : componentMap.entrySet()) {
+			System.err.println(entry.getValue().size() + " " + entry.getKey() + " components");
+		}
+
+		// Key is the output net
+		// Value is the input let
+		Map<String, Collection<String>> gateMap = new TreeMap<String, Collection<String>>();
+
+		// Iterate through the transistors
+		for (String trid : componentMap.get(TYPE_TR)) {
+
+			// Lookup the nets that the transistor is connected to
+			String emitterNet = pinToNameMap.get(TYPE_TR + "_" + trid + "_0");
+			String baseNet = pinToNameMap.get(TYPE_TR + "_" + trid + "_1");
+			String collectorNet = pinToNameMap.get(TYPE_TR + "_" + trid + "_2");
+
+			boolean shorted = false;
+			for (String power : POWER_NETS) {
+				if (emitterNet.equals(power) || baseNet.equals(power) || collectorNet.equals(power)) {
+					System.err.println("Skipping transistor " + trid + " because it has a pin shorted to " + power);
+					shorted = true;
+				}
+			}
+			if (shorted) {
+				continue;
+			}
+
+			// Add to the gate map....
+			Collection<String> gateInputs = gateMap.get(collectorNet);
+			if (gateInputs == null) {
+				gateInputs = new TreeSet<String>();
+				gateMap.put(collectorNet, gateInputs);
+			}
+			gateInputs.add(baseNet);
+
+			// The rest of the code is flagging possible transistor netlist errors
+			
+			// Follow the emitter connections
+			Collection<String> emitterConnections = nameToPinMap.get(emitterNet);
+
+			// Count the current sources, and warn if there are none
+			int csCount = 0;
+			for (String connection : emitterConnections) {
+				if (connection.startsWith(TYPE_TR)) {
+					if (!connection.endsWith("0")) {
+						System.err.println("Warning: Transistor " + trid + " emitter connected to the wrong pin of another transistor: " + connection);
+					}
+				} else if (connection.startsWith(TYPE_CS)) {
+					if (!connection.endsWith("0") &&  !connection.endsWith("1")) {
+						System.err.println("Warning: Transistor " + trid + " emitter connected to the wrong pin of current source: " + connection);
+					}
+					csCount++;
+				} else {
+					System.err.println("Warning: Transistor " + trid + " emitter connected to something unexpected: " + connection);
+				}
+			}
+			if (csCount == 0) {
+				System.err.println("Warning: Transistor " + trid + " emitter not connected to any current sources");
+			}			
+
+			// Follow the collector connections
+			Collection<String> collectorConnections = nameToPinMap.get(collectorNet);
+			
+			// Count the load resistors
+			int rlCount = 0;
+			for (String connection : collectorConnections) {
+				if (connection.startsWith(TYPE_TR)) {
+					if (connection.endsWith("0")) {
+						// Emitter
+						System.err.println("Warning: Transistor " + trid + " collector connected to the emitter of another transistor: " + connection);
+					}
+				} else if (connection.startsWith(TYPE_RL) || connection.startsWith(TYPE_RCS)) {
+					rlCount++;
+				} else {
+					System.err.println("Warning: Transistor " + trid + " collector connected to something unexpected: " + connection);
+				}
+			}
+			if (rlCount == 0) {
+				System.err.println("Warning: Transistor " + trid + " collector not connected to any current sources");
+			}
+		}
+		
+		// Output some statistics about the gates found
+		int MAX = 100;
+		int[] gateDist = new int[MAX];
+		for (int i = 0; i < MAX; i++) {
+			gateDist[i] = 0;
+		}
+		for (Map.Entry<String, Collection<String>> gate : gateMap.entrySet()) {
+			gateDist[gate.getValue().size()]++;
+		}
+		for (int i = 0; i < MAX; i++) {
+			if (gateDist[i] > 0) {
+				System.err.println(gateDist[i] + "\t" + i + " input NOR Gates");
+			}
+		}
+		
+		// Output the gates
+
+		for (Map.Entry<String, Collection<String>> gate : gateMap.entrySet()) {
+			String component = gate.getKey();
+			component += " = NOR(";
+			boolean first = true;
+			for (String net : gate.getValue()) {
+				if (first) {
+					first = false;
+				} else {
+					component += ", ";
+				}
+				component += net;
+			}
+			component += ");";
+			System.out.println(component);
+		}
+		
+
+		
+		// Look for gates that feed back to themselves
+		int selfCoupledCount= 0;
+		for (Map.Entry<String, Collection<String>> gate1 : gateMap.entrySet()) {
+			String output1 = gate1.getKey();
+			Collection<String> inputs1 = gate1.getValue();
+			if (inputs1.contains(output1)) {
+				System.out.println("Self coupled gate " + output1);
+				selfCoupledCount++;
+			}
+		}
+		System.out.println("Found a total of " + selfCoupledCount + " self coupled gates");
+		
+		
+		// Look for cross coupled gates
+		int crossCoupledCount = 0;
+		for (Map.Entry<String, Collection<String>> gate1 : gateMap.entrySet()) {
+			String output1 = gate1.getKey();
+			Collection<String> inputs1 = gate1.getValue();
+			if (inputs1.contains(output1)) {
+				System.out.println("Skipping self coupled gate: " + output1);
+				continue;
+			}
+			for (String output2 : inputs1) {
+				Collection<String> inputs2 = gateMap.get(output2);
+				if (inputs2 != null && inputs2.contains(output1)) {
+					
+					System.out.print("Cross coupled gate pair: "
+							+ output1 + "(" + inputs1.size() + ") and "
+							+ output2 + "(" + inputs2.size() + ") ");
+					crossCoupledCount++;
+
+					// See if we can trace back to a latch
+
+					String gate = null;
+					String data = null;
+					for (String driver1 : inputs1) {
+						if (driver1.equals(output2)) {
+							continue;
+						}
+						Collection<String> driver1inputs = gateMap.get(driver1);
+						if (driver1inputs == null) {
+							System.err.println("No driver for " + driver1);
+							continue;
+						}
+						for (String driver2 : inputs2) {
+							if (driver2.equals(output1)) {
+								continue;
+							}
+							Collection<String> driver2inputs = gateMap.get(driver2);
+							if (driver2inputs == null) {
+								System.err.println("No driver for " + driver2);
+								continue;
+							}
+							if (driver2inputs.contains(driver1)) {
+								// System.out.println("Found possible driver1: " + driver1 + "(" + driver1inputs + ")");
+								// System.out.println("Found possible driver2: " + driver2 + "(" + driver2inputs + ")");
+								for (String driver1input : driver1inputs) {
+									if (driver2inputs.contains(driver1input)) {
+										if (gate == null) {
+											gate = driver1input;
+										} else {
+											System.err.println("Multiple clock candidates for " + driver1 + " and " + driver2);
+										}
+									} else {
+										if (data == null) {
+											data = driver1input;
+										} else {
+											System.out.println("Multiple data candidates for " + driver1 + " and " + driver2);
+
+										}
+									}
+								}
+							}
+						}
+						if (gate != null && data != null) {
+							System.out.println("Found latch: gate=" + gate + "; data=" + data + "; q=" + output1 + "; nq=" + output2);
+						} else {
+							System.out.println("No latch");
+						}
+					}
+				}
+			}
+		}
+		crossCoupledCount = (crossCoupledCount - selfCoupledCount) / 2;
+		System.out.println("Found a total of " + crossCoupledCount + " cross coupled gates");
+	}
+	
+	@SuppressWarnings("unused")
+	private void dumpCells(Cell[][] cells, boolean nets) {
 		for (int y = 0; y < cells.length; y++) {
 			for (int x = 0; x < cells[y].length; x++) {
 				Cell cell = cells[y][x];
@@ -1221,7 +1584,7 @@ public class Process {
 				if (nets) {
 					int net = cell.getNet();
 					if (cell.getNet() > 0) {
-						String name = nameMap.get(net);
+						String name = numberToNameMap.get(net);
 						if (name == null) {
 							name = "" + net;
 						}
