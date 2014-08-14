@@ -1,6 +1,8 @@
 package com.hoglet.ulamangling;
 
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -10,16 +12,20 @@ public class NetList {
 	// Component ID -> Component
 	Map<String, Component> componentMap = new TreeMap<String, Component>();
 	
+	// Net -> Component that have the net as an input
+	Map<String, Collection<Component>> inputMap = new TreeMap<String, Collection<Component>>();
+
 	// Net -> Component Driving Net
-	Map<String, Component> driverMap = new TreeMap<String, Component>();
-	
+	Map<String, Component> outputMap = new TreeMap<String, Component>();
+
 	public NetList() {
 	}
 	
 	private NetList shallowCopy() {
 		NetList netlist = new NetList();
 		netlist.componentMap.putAll(this.componentMap);
-		netlist.driverMap.putAll(this.driverMap);
+		netlist.outputMap.putAll(this.outputMap);
+		netlist.inputMap.putAll(this.inputMap);
 		return netlist;
 	}
 	
@@ -31,15 +37,31 @@ public class NetList {
 		componentMap.put(id, component);
 		return component;
 	}
-	
+
+	protected void addComponentInput(String net, Component component) {
+		Collection<Component> inputs = inputMap.get(net);
+		if (inputs == null) {
+			inputs = new HashSet<Component>();
+			inputMap.put(net, inputs);
+		}
+		inputs.add(component);
+	}
+
 	protected void addComponentOutput(String net, Component component) {
-		driverMap.put(net, component);
+		outputMap.put(net, component);
+	}
+
+	protected void removeComponentOutput(String net, Component component) {
+		outputMap.remove(net);
+	}
+
+	public Component getSource(String net) {
+		return outputMap.get(net);
 	}
 	
-	public Component getDriver(String net) {
-		return driverMap.get(net);
+	public Collection<Component> getDestinations(String net) {
+		return inputMap.get(net);
 	}
-	
 	
 	public Component get(String id) {
 		return componentMap.get(id);
@@ -54,8 +76,11 @@ public class NetList {
 	}
 	
 	public void delete(Component component) {
+		for (String input : component.getInputs()) {
+			inputMap.get(input).remove(component);
+		}
 		for (String output : component.getOutputs()) {
-			driverMap.remove(output);
+			outputMap.remove(output);
 		}
 		componentMap.remove(component.getId());
 	}
@@ -95,6 +120,9 @@ public class NetList {
 		// Look for gates that feed back to themselves
 		int selfCoupledCount= 0;
 		for (Component gate1 : this.getAll()) {
+			if (gate1.getOutput() == null) {
+				continue;
+			}
 			String output1 = gate1.getOutput();
 			Collection<String> inputs1 = gate1.getInputs();
 			if (inputs1.contains(output1)) {
@@ -105,6 +133,29 @@ public class NetList {
 		System.out.println("Found a total of " + selfCoupledCount + " self coupled gates");
 	}
 	
+	public NetList pruneUnconnectedOutputs() {
+		NetList copy = this.shallowCopy();
+		for (Component component : this.getAll()) {
+			Map<String, String> toRemove = new HashMap<String, String>();
+			for (Map.Entry<String, String> entry : component.getNamedOutputs()) {
+				String name = entry.getKey();
+				String net = entry.getValue();
+				Collection<Component> inputs = inputMap.get(net);
+				if (inputs == null || inputs.size() == 0) {
+					toRemove.put(name, net);
+				}
+			}
+			// Delay actual deletion to avoid a concurrent modification exception
+			for (Map.Entry<String, String> entry : toRemove.entrySet()) {
+				String name = entry.getKey();
+				String net = entry.getValue();
+				System.out.println("Removing unused output " + name + " from " + component.getId());
+				component.removeOutput(name, net);
+			}
+		}
+		return copy;
+	}	
+	
 	public NetList replaceWithLatches() {
 		int latchnum = 0;
 		// Look for cross coupled gates
@@ -114,17 +165,28 @@ public class NetList {
 		int crossCoupledCount = 0;
 		for (Component gate1 : this.getAll()) {
 			String output1 = gate1.getOutput();
+			if (gate1.getOutput() == null) {
+				continue;
+			}
 			Collection<String> inputs1 = gate1.getInputs();
 			if (inputs1.contains(output1)) {
 				System.out.println("Skipping self coupled gate: " + output1);
 				continue;
 			}
+			if (inputs1.size() > 2) {
+				System.out.println("Skipping gate with > 2 inputs: " + output1);
+				continue;
+			}
 			for (String output2 : inputs1) {
-				Component gate2 = this.getDriver(output2);
+				Component gate2 = this.getSource(output2);
 				if (gate2 == null) {
 					continue;
 				}
 				Collection<String> inputs2 = gate2.getInputs();
+				if (inputs2.size() > 2) {
+					System.out.println("Skipping gate with > 2 inputs: " + output1);
+					continue;
+				}
 				if (inputs2.contains(output1)) {
 					
 					System.out.println("Cross coupled gate pair: "
@@ -139,7 +201,7 @@ public class NetList {
 						if (driver1.equals(output2)) {
 							continue;
 						}
-						Component gateDriver1 = this.getDriver(driver1);
+						Component gateDriver1 = this.getSource(driver1);
 						if (gateDriver1 == null) {
 							System.err.println("No driver for " + driver1);
 							continue;
@@ -149,7 +211,7 @@ public class NetList {
 							if (driver2.equals(output1)) {
 								continue;
 							}
-							Component gateDriver2 = this.getDriver(driver2);
+							Component gateDriver2 = this.getSource(driver2);
 							if (gateDriver2 == null) {
 								System.err.println("No driver for " + driver2);
 								continue;

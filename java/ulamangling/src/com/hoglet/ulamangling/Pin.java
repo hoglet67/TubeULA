@@ -19,6 +19,8 @@ public class Pin extends XY {
 		TR_EMITTER,
 		TR_BASE,
 		IO,
+		IO_IN,
+		IO_OUT,
 		LINK_L,
 		LINK_R,
 		LINK_T,
@@ -55,10 +57,6 @@ public class Pin extends XY {
 	private PinType type;
 
 	private String name;
-
-	public Pin(int x, int y, String name) {
-		this(x, y, PinType.IO, name);
-	}
 
 	public Pin(int x, int y, PinType type) {
 		this(x, y, type, null);
@@ -190,7 +188,10 @@ public class Pin extends XY {
 		case RES:
 			return "R";
 		case IO:
+		case IO_IN:
 			return "I";
+		case IO_OUT:
+			return "O";
 		case LINK_L:
 			return "<";
 		case LINK_R:
@@ -233,7 +234,7 @@ public class Pin extends XY {
 		case CS_GND_1:
 		case CS_GND_2:
 		case CS_GND_3:
-			return "O";
+			return "0";
 		default:
 			return " ";
 		}

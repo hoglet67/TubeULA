@@ -94,23 +94,23 @@ public class Process {
 		blockCells.put("00", new XY(8, 8));
 		endCells.put("00", new XY(162, 177));
 		ioPinLists.put("00", new Pin[] {
-				new Pin(29, 5, "PA2"),
-				new Pin(45, 5, "DACK"),
-				new Pin(79, 5, "PNWDS"),
-				new Pin(154, 5, "PNRDS"),
-				new Pin(159, 5, "PCS"),
-				new Pin(5, 6, "PA1"),
-				new Pin(5, 23, "PA0"),
-				new Pin(5, 91, "PD7IN"),
-				new Pin(5, 112, "PD7OUT"),
-				new Pin(5, 143, "PD6OUT"),
-				new Pin(5, 71, "PDOE"),
-				new Pin(5, 177, "PDOE"),
-				new Pin(34, 5, "PDOE"),
-				new Pin(86, 5, "PDOE"),
-				new Pin(136, 5, "PDOE"),
-				new Pin(138, 5, "PDOEA"),
-				new Pin(151, 5, "PDOEB")
+				new Pin(29, 5, PinType.IO_IN, "PA2"),
+				new Pin(45, 5, PinType.IO_IN, "DACK"),
+				new Pin(79, 5, PinType.IO_IN, "PNWDS"),
+				new Pin(154, 5, PinType.IO_IN, "PNRDS"),
+				new Pin(159, 5, PinType.IO_IN, "PCS"),
+				new Pin(5, 6, PinType.IO_IN, "PA1"),
+				new Pin(5, 23, PinType.IO_IN, "PA0"),
+				new Pin(5, 91, PinType.IO_IN, "PD7IN"),
+				new Pin(5, 112, PinType.IO_OUT, "PD7OUT"),
+				new Pin(5, 143, PinType.IO_OUT, "PD6OUT"),
+				new Pin(5, 71, PinType.IO_OUT, "PDOE"),
+				new Pin(5, 177, PinType.IO_OUT, "PDOE"),
+				new Pin(34, 5, PinType.IO_OUT, "PDOE"),
+				new Pin(86, 5, PinType.IO_OUT, "PDOE"),
+				new Pin(136, 5, PinType.IO_OUT, "PDOE"),
+				new Pin(138, 5, PinType.IO_OUT, "PDOEA"),
+				new Pin(151, 5, PinType.IO_OUT, "PDOEB")
 		});
 		overrideLists.put("00", new Cell[] {
 		});
@@ -119,7 +119,7 @@ public class Process {
 		blockCells.put("10", new XY(6, 8));
 		endCells.put("10", new XY(160, 177));
 		ioPinLists.put("10", new Pin[] {
-				new Pin(160, 5, "HRST")
+				new Pin(160, 5, PinType.IO_IN, "HRST")
 		});
 		overrideLists.put("10", new Cell[] {
 		});
@@ -128,28 +128,28 @@ public class Process {
 		blockCells.put("20", new XY(6, 8));
 		endCells.put("20", new XY(158, 177));
 		ioPinLists.put("20", new Pin[] {
-				new Pin(3, 5, "HRST"),
-				new Pin(8, 5, "HO2"),
-				new Pin(96, 5, "HCS"),
-				new Pin(109, 5, "HRW"),
-				new Pin(147, 5, "HA2"),
-				new Pin(158, 22, "HA1"),
-				new Pin(158, 53, "HA0"),
-				new Pin(158, 83, "HD7IN"),
-				new Pin(158, 112, "HD7OUT"),
-				new Pin(158, 143, "HD6OUT"),
-				new Pin(158, 176, "HD6IN"),
+				new Pin(3, 5, PinType.IO_IN, "HRST"),
+				new Pin(8, 5, PinType.IO_IN, "HO2"),
+				new Pin(96, 5, PinType.IO_IN, "HCS"),
+				new Pin(109, 5, PinType.IO_IN, "HRW"),
+				new Pin(147, 5, PinType.IO_IN, "HA2"),
+				new Pin(158, 22, PinType.IO_IN, "HA1"),
+				new Pin(158, 53, PinType.IO_IN, "HA0"),
+				new Pin(158, 83, PinType.IO_IN, "HD7IN"),
+				new Pin(158, 112, PinType.IO_OUT, "HD7OUT"),
+				new Pin(158, 143, PinType.IO_OUT, "HD6OUT"),
+				new Pin(158, 176, PinType.IO_IN, "HD6IN"),
 
-				new Pin(26, 5, "HDOE"),
-				new Pin(65, 5, "HDOE"),
-				new Pin(97, 5, "HDOE"),
-				new Pin(108, 5, "HDOE"),
-				new Pin(128, 5, "HDOE"),
-				new Pin(158, 71, "HDOE"),
-				new Pin(158, 158, "HDOE"),
-				new Pin(158, 164, "HDOE"),
-				new Pin(158, 177, "HDOE"),
-				new Pin(24, 5, "HDOEA")
+				new Pin(26, 5, PinType.IO_OUT, "HDOE"),
+				new Pin(65, 5, PinType.IO_OUT, "HDOE"),
+				new Pin(97, 5, PinType.IO_OUT, "HDOE"),
+				new Pin(108, 5, PinType.IO_OUT, "HDOE"),
+				new Pin(128, 5, PinType.IO_OUT, "HDOE"),
+				new Pin(158, 71, PinType.IO_OUT, "HDOE"),
+				new Pin(158, 158, PinType.IO_OUT, "HDOE"),
+				new Pin(158, 164, PinType.IO_OUT, "HDOE"),
+				new Pin(158, 177, PinType.IO_OUT, "HDOE"),
+				new Pin(24, 5, PinType.IO_OUT, "HDOEA")
 		});
 		overrideLists.put("20", new Cell[] {
 		});
@@ -159,16 +159,16 @@ public class Process {
 		blockCells.put("01", new XY(8, 6));
 		endCells.put("01", new XY(162, 175));
 		ioPinLists.put("01", new Pin[] {
-				new Pin(5, 2, "PD6IN"),
-				new Pin(5, 30, "PD5OUT"),
-				new Pin(5, 106, "PD5IN"),
-				new Pin(5, 121, "PD4OUT"),
-				new Pin(5, 142, "PD4IN"),
-				new Pin(5, 173, "PD3IN"),
-				new Pin(5, 1, "PDOE"),
-				new Pin(5, 161, "PDOE"),
-				new Pin(5, 169, "PDOE"),
-				new Pin(5, 174, "PDOE")
+				new Pin(5, 2, PinType.IO_IN, "PD6IN"),
+				new Pin(5, 30, PinType.IO_OUT, "PD5OUT"),
+				new Pin(5, 106, PinType.IO_IN, "PD5IN"),
+				new Pin(5, 121, PinType.IO_OUT, "PD4OUT"),
+				new Pin(5, 142, PinType.IO_IN, "PD4IN"),
+				new Pin(5, 173, PinType.IO_IN, "PD3IN"),
+				new Pin(5, 1, PinType.IO_OUT, "PDOE"),
+				new Pin(5, 161, PinType.IO_OUT, "PDOE"),
+				new Pin(5, 169, PinType.IO_OUT, "PDOE"),
+				new Pin(5, 174, PinType.IO_OUT, "PDOE")
 		});
 		overrideLists.put("01", new Cell[] {
 		});
@@ -187,14 +187,14 @@ public class Process {
 		blockCells.put("21", new XY(6, 6));
 		endCells.put("21", new XY(158, 175));
 		ioPinLists.put("21", new Pin[] {
-				new Pin(158, 23, "HD5OUT"),
-				new Pin(158, 97, "HD5IN"),
-				new Pin(158, 121, "HD4OUT"),
-				new Pin(158, 150, "HD4IN"),
-				new Pin(158, 0, "HDOE"),
-				new Pin(158, 38, "HDOE"),
-				new Pin(158, 45, "HDOE"),
-				new Pin(158, 161, "HDOE")
+				new Pin(158, 23, PinType.IO_OUT, "HD5OUT"),
+				new Pin(158, 97, PinType.IO_IN, "HD5IN"),
+				new Pin(158, 121, PinType.IO_OUT, "HD4OUT"),
+				new Pin(158, 150, PinType.IO_IN, "HD4IN"),
+				new Pin(158, 0, PinType.IO_OUT, "HDOE"),
+				new Pin(158, 38, PinType.IO_OUT, "HDOE"),
+				new Pin(158, 45, PinType.IO_OUT, "HDOE"),
+				new Pin(158, 161, PinType.IO_OUT, "HDOE")
 		});
 		overrideLists.put("21", new Cell[] {
 		});
@@ -204,19 +204,19 @@ public class Process {
 		blockCells.put("02", new XY(8, 6));
 		endCells.put("02", new XY(162, 172));
 		ioPinLists.put("02", new Pin[] {
-				new Pin(5, 34, "PD3OUT"),
-				new Pin(5, 65, "PD2OUT"),
-				new Pin(5, 76, "PD2IN"),
-				new Pin(5, 127, "PD1OUT"),
-				new Pin(5, 148, "PD1IN"),
-				new Pin(7, 172, "PD0OUT"),
-				new Pin(35, 172, "PD0IN"),
-				new Pin(160, 172, "PIRQ"),
-				new Pin(157, 172, "PRST"),
-				new Pin(138, 172, "DRQ"),
-				new Pin(5, 2, "PDOE"),
-				new Pin(5, 167, "PDOE"),
-				new Pin(5, 172, "PDOE")
+				new Pin(5, 34, PinType.IO_OUT, "PD3OUT"),
+				new Pin(5, 65, PinType.IO_OUT, "PD2OUT"),
+				new Pin(5, 76, PinType.IO_IN, "PD2IN"),
+				new Pin(5, 127, PinType.IO_OUT, "PD1OUT"),
+				new Pin(5, 148, PinType.IO_IN, "PD1IN"),
+				new Pin(7, 172, PinType.IO_OUT, "PD0OUT"),
+				new Pin(35, 172, PinType.IO_IN, "PD0IN"),
+				new Pin(160, 172, PinType.IO_OUT, "PIRQ"),
+				new Pin(157, 172, PinType.IO_OUT, "PRST"),
+				new Pin(138, 172, PinType.IO_OUT, "DRQ"),
+				new Pin(5, 2, PinType.IO_OUT, "PDOE"),
+				new Pin(5, 167, PinType.IO_OUT, "PDOE"),
+				new Pin(5, 172, PinType.IO_OUT, "PDOE")
 		});
 		overrideLists.put("02", new Cell[] {
 		});
@@ -226,8 +226,8 @@ public class Process {
 		blockCells.put("12", new XY(6, 6));
 		endCells.put("12", new XY(160, 172));
 		ioPinLists.put("12", new Pin[] {
-				new Pin(153, 172, "HIRQ"),
-				new Pin(160, 172, "PNMI")
+				new Pin(153, 172, PinType.IO_OUT, "HIRQ"),
+				new Pin(160, 172, PinType.IO_OUT, "PNMI")
 		});
 		overrideLists.put("12", new Cell[] {
 		});
@@ -237,21 +237,21 @@ public class Process {
 		blockCells.put("22", new XY(6, 6));
 		endCells.put("22", new XY(158, 172));
 		ioPinLists.put("22", new Pin[] {
-				new Pin(158, 3, "HD3OUT"),
-				new Pin(158, 32, "HD3IN"),
-				new Pin(158, 65, "HD2OUT"),
-				new Pin(158, 94, "HD2IN"),
-				new Pin(158, 127, "HD1OUT"),
-				new Pin(158, 156, "HD1IN"),
-				new Pin(155, 172, "HD0OUT"),
-				new Pin(119, 172, "HD0IN"),
-				new Pin(158, 0, "HDOE"),
-				new Pin(158, 43, "HDOE"),
-				new Pin(158, 50, "HDOE"),
-				new Pin(158, 105, "HDOE"),
-				new Pin(158, 112, "HDOE"),
-				new Pin(158, 167, "HDOE"),
-				new Pin(157, 172, "HDOE")
+				new Pin(158, 3, PinType.IO_OUT, "HD3OUT"),
+				new Pin(158, 32, PinType.IO_IN, "HD3IN"),
+				new Pin(158, 65, PinType.IO_OUT, "HD2OUT"),
+				new Pin(158, 94, PinType.IO_IN, "HD2IN"),
+				new Pin(158, 127, PinType.IO_OUT, "HD1OUT"),
+				new Pin(158, 156, PinType.IO_IN, "HD1IN"),
+				new Pin(155, 172, PinType.IO_OUT, "HD0OUT"),
+				new Pin(119, 172, PinType.IO_IN, "HD0IN"),
+				new Pin(158, 0, PinType.IO_OUT, "HDOE"),
+				new Pin(158, 43, PinType.IO_OUT, "HDOE"),
+				new Pin(158, 50, PinType.IO_OUT, "HDOE"),
+				new Pin(158, 105, PinType.IO_OUT, "HDOE"),
+				new Pin(158, 112, PinType.IO_OUT, "HDOE"),
+				new Pin(158, 167, PinType.IO_OUT, "HDOE"),
+				new Pin(157, 172, PinType.IO_OUT, "HDOE")
 		});
 		overrideLists.put("22", new Cell[] {
 				new Cell(152, 54).setLeft().setRight()
@@ -1177,11 +1177,32 @@ public class Process {
 		blocks.get(7)[27][148].setConnections(3);
 		blocks.get(7)[28][148].setConnections(1);
 
-		// Mis Matched emitters and collectors
+
+		// Shorts near links between cells, causing Mis Matched emitters and collectors
+		
 		blocks.get(0)[131][160].setConnections(8);
 		blocks.get(0)[131][161].setConnections(5);
 		
+		blocks.get(1)[125][1].setConnections(5);
+		blocks.get(1)[125][2].setConnections(2);
+		
+		blocks.get(6)[33][160].setConnections(4);
+		blocks.get(6)[33][161].setConnections(5);
 
+		blocks.get(6)[129][160].setConnections(8);
+		blocks.get(6)[129][161].setConnections(5);
+		
+		// Last few things causing Mis Matched emitters and collectors
+		
+		blocks.get(3)[7][94].setConnections(5);
+		blocks.get(3)[7][95].setConnections(2);
+		
+		blocks.get(1)[144][59].setConnections(1);
+		blocks.get(1)[144][60].setConnections(5);
+		
+		blocks.get(4)[82][54].setConnections(5);
+		blocks.get(4)[82][55].setConnections(1);
+		
 		// Extract the width/heights of the blocks
 		int w0 = blocks.get(0)[0].length;
 		int w1 = blocks.get(1)[0].length;;
@@ -1359,7 +1380,8 @@ public class Process {
 		for (int y = 0; y < array.length; y++) {
 			for (int x = 0; x < array[y].length; x++) {
 				Cell cell = array[y][x];
-				if (cell.getType() == PinType.IO) {
+				// TODO IO_IN is legacy, remove once cell maps have been rebuilt
+				if (cell.getType() == PinType.IO  || cell.getType() == PinType.IO_IN || cell.getType() == PinType.IO_OUT) {
 					String name = cell.getPin().getName();
 					if (nameMap.containsKey(cell.getNet())) {
 						String existingName = nameMap.get(cell.getNet());
@@ -1583,19 +1605,50 @@ public class Process {
 			}
 		}
 		
+		// Add IO Pins
+		addIOPins(netlist);
 
 		
-		netlist.dump();
-		netlist.checkFromSelfCoupledGates();
-
-		NetList copy = netlist.replaceWithLatches();
-		copy.dump();
-
 		System.out.println("**** Gate Level Netlist ****");
 		netlist.dumpStats();
+		netlist.dump();
 
+		netlist.checkFromSelfCoupledGates();
+
+		netlist = netlist.replaceWithLatches();
 		System.out.println("**** Latch Level Netlist ****");
-		copy.dumpStats();
+		netlist.dumpStats();
+		netlist.dump();
+
+		
+		netlist = netlist.pruneUnconnectedOutputs();
+		System.out.println("**** Pruned Latch Level Netlist ****");
+		netlist.dumpStats();
+		netlist.dump();
+
+	}
+
+	private void addIOPins(NetList netlist) {
+		Collection<String> outputs = new TreeSet<String>();
+		Collection<String> inputs = new TreeSet<String>();
+		for (Pin pins[] : ioPinLists.values()) {
+			for (Pin pin : pins) {
+				if (pin.getType() == PinType.IO_IN) {
+					inputs.add(pin.getName());
+				}
+				if (pin.getType() == PinType.IO_OUT) {
+					outputs.add(pin.getName());
+				}
+			}
+		}
+		for (String input : inputs) {
+			Component component = netlist.createComponent("INPUT", input);
+			component.addOutput("O", input);
+		}
+		for (String output : outputs) {
+			Component component = netlist.createComponent("OUTPUT", output);
+			component.addInput("I", output);
+		}
 	}
 	
 	@SuppressWarnings("unused")

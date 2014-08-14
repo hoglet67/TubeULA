@@ -44,12 +44,27 @@ public class Component {
 			inputNets = new TreeSet<String>();
 			inputs.put(name, inputNets);
 		}
-//		if (inputNets.contains(net)) {
-//			throw new RuntimeException("Component input " + name + " net " + net + " is already present: " + toString());
-//		}
 		inputNets.add(net);
+		netlist.addComponentInput(net, this);
 	}
 
+	public void addOutput(String name, String net) {
+		if (outputs.containsKey(name)) {
+			throw new RuntimeException("Component output " + name + " is already connected:" + toString());
+		}
+		outputs.put(name, net);
+		netlist.addComponentOutput(net, this);
+	}
+
+	public void removeOutput(String name, String net) {
+		if (!outputs.containsKey(name)) {
+			throw new RuntimeException("Component output " + name + " is missing or not connected:" + toString());
+		}
+		outputs.remove(name);
+		netlist.removeComponentOutput(net, this);
+	}
+
+	
 	public int numInputs() {
 		int count = 0;
 		for (Collection<String> input : inputs.values()) {
@@ -62,14 +77,6 @@ public class Component {
 		return outputs.size();
 	}
 
-	public void addOutput(String name, String net) {
-		if (outputs.containsKey(net)) {
-			throw new RuntimeException("Component output " + name + " is already connected:" + toString());
-		}
-		outputs.put(name, net);
-		netlist.addComponentOutput(net, this);
-	}
-
 	public Collection<String> getInputs(String name) {
 		return inputs.get(name);
 	}
@@ -77,7 +84,7 @@ public class Component {
 
 	public Collection<String> getInputs() {
 		if (inputs.size() == 0) {
-			throw new RuntimeException("Component does not have any inputs");
+			return new TreeSet<String>();
 		} else if (inputs.size() > 1) {
 			throw new RuntimeException("Component has multiple input types");
 		} else {
@@ -91,7 +98,7 @@ public class Component {
 
 	public String getOutput() {
 		if (outputs.size() == 0) {
-			throw new RuntimeException("Component does not have any outputs");
+			return null;
 		} else if (outputs.size() > 1) {
 			throw new RuntimeException("Component has multiple output nets");
 		} else {
@@ -103,12 +110,11 @@ public class Component {
 		return outputs.values();
 	}
 	
-	
-	public String toString() {
-		return toStringNew();
+	public Collection<Map.Entry<String, String>> getNamedOutputs() {
+		return outputs.entrySet();
 	}
 	
-	public String toStringNew() {
+	public String toString() {
 		String component = type + " " + id + "(";
 		boolean first = true;
 		// Outputs
@@ -123,7 +129,11 @@ public class Component {
 		// Inputs
 		for (Map.Entry<String, Collection<String>> input : inputs.entrySet()) {
 			for (String value : input.getValue()) {
-				component += ",";
+				if (first) {
+					first = false;
+				} else {
+					component += ",";
+				}
 				component += input.getKey() + "=>" + value;
 			}
 		}
@@ -132,19 +142,6 @@ public class Component {
 		
 	}
 
-//	public String toStringOld() {
-//		String component = getOutput() + " = " + type + "(";
-//		boolean first = true;
-//		for (String input : getInputs()) {
-//			if (first) {
-//				first = false;
-//			} else {
-//				component += ", ";
-//			}
-//			component += input;
-//		}
-//		component += ");";
-//		return component;
-//	}
+
 
 }
