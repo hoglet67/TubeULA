@@ -1200,7 +1200,9 @@ public class Process {
 		NetList netlist = transformToGates();
 		
 		// Add IO Pins
-		addIOPins(netlist);
+		Collection<String> inputPins = getInputPins();
+		Collection<String> outputPins = getOutputPins();
+		addIOPins(netlist, inputPins, outputPins);
 
 		// Output for debugging
 		System.out.println("**** Gate Level Netlist ****");
@@ -1212,7 +1214,10 @@ public class Process {
 
 		// Refine the netlist by recognising latches
 		netlist = netlist.replaceWithLatches();
-		
+
+		// Refine the netlist by recognising latches
+		netlist = netlist.replaceWithSR();
+
 		// Prune any output pins that don't drive anything (e.g. unused latch outputs)
 		netlist = netlist.pruneUnconnectedOutputs();
 		
@@ -1220,14 +1225,12 @@ public class Process {
 		netlist.dumpStats();
 		netlist.dump();
 
-		for (int j = 0; j < 2; j++) {
-			for (int i = 7; i >= 0; i--) {
-				String net = ((j == 0) ? "PD" : "HD") + i + "IN";
-				System.out.println("**** Tracing Path from " + net + " ****");
-				List<String> paths = netlist.traceNetForward(net);
-				for (String path : paths) {
-					System.out.println(path);
-				}
+		for (String net : inputPins) {
+			System.out.println("**** Tracing Path from " + net + " ****");
+			List<String> paths = netlist.traceNetForward(net);
+			System.out.println("**** found " + paths.size() + " paths");
+			for (String path : paths) {
+				System.out.println(path);
 			}
 		}
 	}
@@ -1583,9 +1586,32 @@ public class Process {
 
 	}
 
-	private void addIOPins(NetList netlist) {
-		Collection<String> outputs = new TreeSet<String>();
+	private Collection<String> getInputPins() {
 		Collection<String> inputs = new TreeSet<String>();
+		for (Pin pins[] : ioPinLists.values()) {
+			for (Pin pin : pins) {
+				if (pin.getType() == PinType.IO_IN) {
+					inputs.add(pin.getName());
+				}
+			}
+		}
+		return inputs;
+		
+	}
+
+	private Collection<String> getOutputPins() {
+		Collection<String> outputs = new TreeSet<String>();
+		for (Pin pins[] : ioPinLists.values()) {
+			for (Pin pin : pins) {
+				if (pin.getType() == PinType.IO_OUT) {
+					outputs.add(pin.getName());
+				}
+			}
+		}
+		return outputs;
+	}
+
+	private void addIOPins(NetList netlist, Collection<String> inputs, Collection<String> outputs) {
 		for (Pin pins[] : ioPinLists.values()) {
 			for (Pin pin : pins) {
 				if (pin.getType() == PinType.IO_IN) {

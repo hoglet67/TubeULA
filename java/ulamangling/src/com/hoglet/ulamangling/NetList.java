@@ -189,7 +189,7 @@ public class NetList {
 					crossCoupledCount++;
 
 					if (inputs1.size() > 2 || inputs2.size() > 2) {
-						System.out.println("Skipping candidate with " + inputs1.size() + " and " + inputs2.size() + " input:" + output1 + " / " + output2);
+						System.out.println("Skipping LATCH candidate with " + inputs1.size() + " and " + inputs2.size() + " input:" + output1 + " / " + output2);
 						continue;
 					}
 
@@ -240,12 +240,6 @@ public class NetList {
 									copy.delete(gateDriver1);
 									copy.delete(gateDriver2);
 									
-									if (gate1.numInputs() > 2) {
-										System.err.println("WARNING: gate1 has > 2 inputs: " + gate1);
-									}
-									if (gate2.numInputs() > 2) {
-										System.err.println("WARNING: gate2 has > 2 inputs: " + gate2);
-									}
 									if (gateDriver1.numInputs() > 2) {
 										System.err.println("WARNING: gateDriver1 has > 2 inputs: " + gateDriver1);
 									}
@@ -279,7 +273,68 @@ public class NetList {
 		System.out.println("Found a total of " + latchnum + " latches");
 		return copy;
 	}
-	
+
+	public NetList replaceWithSR() {
+		int latchnum = 0;
+		NetList copy = this.shallowCopy();
+		for (Component gate1 : this.getAll()) {
+			if (!gate1.getType().equals("NOR")) {
+				continue;
+			}
+			String output1 = gate1.getOutput();
+			if (gate1.getOutput() == null) {
+				continue;
+			}
+			Collection<String> inputs1 = gate1.getInputs();
+			for (String output2 : inputs1) {
+				// As the component is symmertical, make sure it is only added once
+				if (output2.compareTo(output1) < 0) {
+					continue;
+				}
+				Component gate2 = this.getSource(output2);
+				if (gate2 == null) {
+					continue;
+				}
+				if (!gate2.getType().equals("NOR")) {
+					continue;
+				}
+				Collection<String> inputs2 = gate2.getInputs();
+				
+				
+				if (inputs2.contains(output1)) {
+
+					if (inputs1.size() > 2 || inputs2.size() > 2) {
+						System.out.println("Skipping SR candidate with " + inputs1.size() + " and " + inputs2.size() + " input:" + output1 + " / " + output2);
+						continue;
+					}
+
+					System.out.println("Cross coupled gate pair: " + output1 + "(" + inputs1.size() + ") and " + output2 + "("
+							+ inputs2.size() + ")");
+
+					copy.delete(gate1);
+					copy.delete(gate2);
+
+					Component latch = copy.createComponent("SR", "SR" + latchnum++);
+					for (String input : inputs1) {
+						if (!input.equals(output2)) {
+							latch.addInput("R", input);
+						}
+					}
+					for (String input : inputs2) {
+						if (!input.equals(output1)) {
+							latch.addInput("S", input);
+						}
+					}
+					latch.addOutput("Q", output1);
+					latch.addOutput("NQ", output2);
+
+				}
+			}
+		}
+		System.out.println("Found a total of " + latchnum + " set reset latches");
+		return copy;
+	}
+
 	
 	public List<String> traceNetForward(String net) {
 		List<String> paths = new ArrayList<String>();
@@ -300,7 +355,7 @@ public class NetList {
 		Collection<Component> components = inputMap.get(net);
 		for (Component c : components) {
 			for (String output : c.getOutputs()) {
-				paths.add(pad + net + " => [" + c.getId() + "] => " + output);
+				paths.add(pad + net + " => [" + c + "] => " + output);
 				traceNetForward(c.getId(), output, depth + 1, paths, visited);
 			}
 		}
