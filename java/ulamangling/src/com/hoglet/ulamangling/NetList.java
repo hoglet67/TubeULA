@@ -1,8 +1,10 @@
 package com.hoglet.ulamangling;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -173,26 +175,23 @@ public class NetList {
 				System.out.println("Skipping self coupled gate: " + output1);
 				continue;
 			}
-			if (inputs1.size() > 2) {
-				System.out.println("Skipping gate with > 2 inputs: " + output1);
-				continue;
-			}
 			for (String output2 : inputs1) {
 				Component gate2 = this.getSource(output2);
 				if (gate2 == null) {
 					continue;
 				}
 				Collection<String> inputs2 = gate2.getInputs();
-				if (inputs2.size() > 2) {
-					System.out.println("Skipping gate with > 2 inputs: " + output1);
-					continue;
-				}
 				if (inputs2.contains(output1)) {
 					
 					System.out.println("Cross coupled gate pair: "
 							+ output1 + "(" + inputs1.size() + ") and "
 							+ output2 + "(" + inputs2.size() + ")");
 					crossCoupledCount++;
+
+					if (inputs1.size() > 2 || inputs2.size() > 2) {
+						System.out.println("Skipping candidate with " + inputs1.size() + " and " + inputs2.size() + " input:" + output1 + " / " + output2);
+						continue;
+					}
 
 					// See if we can trace back to a latch
 
@@ -281,4 +280,49 @@ public class NetList {
 		return copy;
 	}
 	
+	
+	public List<String> traceNetForward(String net) {
+		List<String> paths = new ArrayList<String>();
+		Collection<String> visited = new HashSet<String>();
+		traceNetForward("", net, 0, paths, visited);
+		return paths;
+	}
+
+	public void traceNetForward(String cmpId, String net, int depth, List<String> paths, Collection<String> visited) {
+		if (visited.contains(net)) {
+			return;
+		}
+		visited.add(net);
+		String pad = "";
+		for (int i = 0; i < depth; i++) {
+			pad += " ";
+		}
+		Collection<Component> components = inputMap.get(net);
+		for (Component c : components) {
+			for (String output : c.getOutputs()) {
+				paths.add(pad + net + " => [" + c.getId() + "] => " + output);
+				traceNetForward(c.getId(), output, depth + 1, paths, visited);
+			}
+		}
+	}
+	
+//	public void traceNetForward(String net, int depth, List<String> paths, Collection<String> visited) {
+//		if (visited.contains(net)) {
+//			return;
+//		}
+//		visited.add(net);
+//		Collection<Component> components = inputMap.get(net);
+//		for (Component c : components) {
+//			String path = "";
+//			for (int i = 0; i < depth; i++) {
+//				path += " ";
+//			}
+//			path += net + " => " + c.getId();
+//			paths.add(path);
+//			for (String output : c.getOutputs()) {
+//				traceNetForward(output, depth + 1, paths, visited);
+//			}
+//		}
+//	}
+
 }

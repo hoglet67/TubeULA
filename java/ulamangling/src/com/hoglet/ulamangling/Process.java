@@ -1247,15 +1247,47 @@ public class Process {
 		// Build mapping of external pin name to internal net numbers
 		numberToNameMap = buildNameMap(array);
 
-		// Add the components in each block
+		// Add the transistors/resistors/current sources in each block into the 
+		//		nameToPinMap
+		//		pinToNameMap
+		//		componentMap
 		generateTransistorNetlist(blocks, blockOrigins, cellOffsets, array);
-		
-		// Transform the netlist from transistors to gates
-		transformToGates();
-		
-
 		// dumpCells(array, true);
+		
+		// Transform the transistors level netlist to gates
+		NetList netlist = transformToGates();
+		
+		// Add IO Pins
+		addIOPins(netlist);
 
+		// Output for debugging
+		System.out.println("**** Gate Level Netlist ****");
+		netlist.dumpStats();
+		netlist.dump();
+
+		// Sanity check we have no gates that feedback to themselves
+		netlist.checkFromSelfCoupledGates();
+
+		// Refine the netlist by recognising latches
+		netlist = netlist.replaceWithLatches();
+		
+		// Prune any output pins that don't drive anything (e.g. unused latch outputs)
+		netlist = netlist.pruneUnconnectedOutputs();
+		
+		System.out.println("**** Latch Level Netlist ****");
+		netlist.dumpStats();
+		netlist.dump();
+
+		for (int j = 0; j < 2; j++) {
+			for (int i = 7; i >= 0; i--) {
+				String net = ((j == 0) ? "PD" : "HD") + i + "IN";
+				System.out.println("**** Tracing Path from " + net + " ****");
+				List<String> paths = netlist.traceNetForward(net);
+				for (String path : paths) {
+					System.out.println(path);
+				}
+			}
+		}
 	}
 
 	private Cell[][] parseBlock(File blockFile) throws IOException {
@@ -1509,7 +1541,7 @@ public class Process {
 		}
 	}
 	
-	private void transformToGates() {
+	private NetList transformToGates() {
 		System.err.println(nameToPinMap.size() + " nets");
 		System.err.println(pinToNameMap.size() + " pins");
 		for (Map.Entry<String, Collection<String>> entry : componentMap.entrySet()) {
@@ -1605,26 +1637,7 @@ public class Process {
 			}
 		}
 		
-		// Add IO Pins
-		addIOPins(netlist);
-
-		
-		System.out.println("**** Gate Level Netlist ****");
-		netlist.dumpStats();
-		netlist.dump();
-
-		netlist.checkFromSelfCoupledGates();
-
-		netlist = netlist.replaceWithLatches();
-		System.out.println("**** Latch Level Netlist ****");
-		netlist.dumpStats();
-		netlist.dump();
-
-		
-		netlist = netlist.pruneUnconnectedOutputs();
-		System.out.println("**** Pruned Latch Level Netlist ****");
-		netlist.dumpStats();
-		netlist.dump();
+		return netlist;
 
 	}
 
