@@ -67,8 +67,6 @@ public class Process {
 	// The list of IO Pins
 	public static Map<String, Pin[]> ioPinLists = new HashMap<String, Pin[]>();
 
-	public static Map<String, Cell[]> overrideLists = new HashMap<String, Cell[]>();
-
 	public static Map<PinType, XY[]> underpassMap = new HashMap<Pin.PinType, XY[]>(); 
 	
 	static {
@@ -112,16 +110,12 @@ public class Process {
 				new Pin(138, 5, PinType.IO_OUT, "PDOEA"),
 				new Pin(151, 5, PinType.IO_OUT, "PDOEB")
 		});
-		overrideLists.put("00", new Cell[] {
-		});
 				
 		startCells.put("10", new XY(0, 5));
 		blockCells.put("10", new XY(6, 8));
 		endCells.put("10", new XY(160, 177));
 		ioPinLists.put("10", new Pin[] {
 				new Pin(160, 5, PinType.IO_IN, "HRST")
-		});
-		overrideLists.put("10", new Cell[] {
 		});
 
 		startCells.put("20", new XY(0, 5));
@@ -151,9 +145,6 @@ public class Process {
 				new Pin(158, 177, PinType.IO_OUT, "HDOE"),
 				new Pin(24, 5, PinType.IO_OUT, "HDOEA")
 		});
-		overrideLists.put("20", new Cell[] {
-		});
-
 		
 		startCells.put("01", new XY(5, 0));
 		blockCells.put("01", new XY(8, 6));
@@ -170,19 +161,13 @@ public class Process {
 				new Pin(5, 169, PinType.IO_OUT, "PDOE"),
 				new Pin(5, 174, PinType.IO_OUT, "PDOE")
 		});
-		overrideLists.put("01", new Cell[] {
-		});
-
 
 		startCells.put("11", new XY(0, 0));
 		blockCells.put("11", new XY(6, 6));
 		endCells.put("11", new XY(160, 175));
 		ioPinLists.put("11", new Pin[] {
 		});
-		overrideLists.put("11", new Cell[] {
-		});
 
-		
 		startCells.put("21", new XY(0, 0));
 		blockCells.put("21", new XY(6, 6));
 		endCells.put("21", new XY(158, 175));
@@ -196,9 +181,6 @@ public class Process {
 				new Pin(158, 45, PinType.IO_OUT, "HDOE"),
 				new Pin(158, 161, PinType.IO_OUT, "HDOE")
 		});
-		overrideLists.put("21", new Cell[] {
-		});
-
 		
 		startCells.put("02", new XY(5, 0));
 		blockCells.put("02", new XY(8, 6));
@@ -218,9 +200,6 @@ public class Process {
 				new Pin(5, 167, PinType.IO_OUT, "PDOE"),
 				new Pin(5, 172, PinType.IO_OUT, "PDOE")
 		});
-		overrideLists.put("02", new Cell[] {
-		});
-
 
 		startCells.put("12", new XY(0, 0));
 		blockCells.put("12", new XY(6, 6));
@@ -229,9 +208,6 @@ public class Process {
 				new Pin(153, 172, PinType.IO_OUT, "HIRQ"),
 				new Pin(160, 172, PinType.IO_OUT, "PNMI")
 		});
-		overrideLists.put("12", new Cell[] {
-		});
-
 
 		startCells.put("22", new XY(0, 0));
 		blockCells.put("22", new XY(6, 6));
@@ -253,10 +229,6 @@ public class Process {
 				new Pin(158, 167, PinType.IO_OUT, "HDOE"),
 				new Pin(157, 172, PinType.IO_OUT, "HDOE")
 		});
-		overrideLists.put("22", new Cell[] {
-				new Cell(152, 54).setLeft().setRight()
-		});
-
 	}
 
 	public static Pin[] cellPins = new Pin[] {
@@ -396,7 +368,6 @@ public class Process {
 		XY startCell = startCells.get(name);
 		XY endCell = endCells.get(name);
 		Pin[] ioPinList = ioPinLists.get(name);
-		Cell[] overrideList = overrideLists.get(name);
 
 		System.out.println("# Converting image");
 		int[][] pixels = convertTo2DWithoutUsingGetRGB(image);
@@ -430,9 +401,12 @@ public class Process {
 			}
 		}
 
-		fixKnownPatterns(cells, overrideList);
+		fixKnownPatterns(cells);
 
 		fixDodgyVSSConnection(cells, blockCell);
+		
+		
+		fixExtractionErrors(cells, name);
 
 		int ret;
 
@@ -481,6 +455,10 @@ public class Process {
 		System.out.println("# Final DRC Bridge Count = " + ret);
 
 		Cell[][] cellsLast = cellsOut11;
+		
+		// It's necessary to do this again, because one of out heuristics
+		// fixDodgyVSSConnections introduces a few errors
+		fixExtractionErrors(cellsLast, name);
 
 		System.out.println("# Writing Json");
         GsonBuilder builder = new GsonBuilder();
@@ -676,10 +654,7 @@ public class Process {
 		
 		
 
-	private void fixKnownPatterns(Cell[][] cells, Cell[] overrideList) {
-		for (Cell override : overrideList) {
-			cells[override.getPin().getY()][override.getPin().getX()].setConnections(override.getConnections());
-		}
+	private void fixKnownPatterns(Cell[][] cells) {
 		for (int yi = 0; yi < cells.length; yi++) {
 			for (int xi = 0; xi < cells[yi].length; xi++) {
 
@@ -943,6 +918,206 @@ public class Process {
 			}
 		}
 	}
+	
+	private void fixExtractionErrors(Cell[][] cells, String name) {
+
+		
+		
+		XY[] csShorts = new XY[] {};
+				
+		if (name.equals("00")) {
+			// Shorts near links between cells, causing Mis Matched emitters and
+			// collectors
+			cells[131][160].setConnections(8);
+			cells[131][161].setConnections(5);
+		}
+
+		if (name.equals("10")) {
+			// block 10
+			csShorts = new XY[] {
+				new XY(0, 0),
+				new XY(0, 1),
+				new XY(0, 3),
+				new XY(0, 6),
+				new XY(0, 9),
+				new XY(3, 0),
+				new XY(3, 1),
+				new XY(3, 2),
+				new XY(3, 4),
+				new XY(3, 5),
+				new XY(3, 8),
+				new XY(3, 9),
+				new XY(3, 10),
+				new XY(6, 0),
+				new XY(6, 1),
+				new XY(6, 3),
+				new XY(6, 10)
+			};
+
+			// Fix shorts to VSS
+			cells[35][152].setConnections(0);
+			cells[36][152].setConnections(6);
+			cells[37][152].setConnections(5);
+			cells[38][152].setConnections(5);
+			cells[96][153].setConnections(8);
+			cells[97][153].setConnections(10);
+			cells[52][39].setConnections(15);
+			cells[53][39].setConnections(5);
+			cells[54][39].setConnections(3);
+			// Connected to something unexpected
+			cells[119][73].setConnections(10);
+			cells[120][73].setConnections(4);
+			// Self Coupled Gates
+			cells[146][15].setConnections(5);
+			cells[146][16].setConnections(2);
+			// Shorts near links between cells, causing Mis Matched emitters and
+			// collectors
+			cells[125][1].setConnections(5);
+			cells[125][2].setConnections(2);
+			// Last few things causing Mis Matched emitters and collectors
+			cells[144][59].setConnections(1);
+			cells[144][60].setConnections(5);
+		}
+
+		if (name.equals("20")) {
+			// Danling nets
+			cells[127][93].setConnections(0);
+			cells[127][94].setConnections(5);
+			cells[127][96].setConnections(0);
+			cells[127][97].setConnections(5);
+			cells[128][96].setConnections(6);
+			cells[128][97].setConnections(9);
+		}
+
+		if (name.equals("01")) {
+			// Fix emitter not connected to current source
+			cells[119][14].setConnections(7);
+			cells[119][15].setConnections(11);
+			// Last few things causing Mis Matched emitters and collectors
+			cells[7][94].setConnections(5);
+			cells[7][95].setConnections(2);
+		}
+
+		if (name.equals("11")) {
+			csShorts = new XY[] {
+				new XY(3, 5),
+				new XY(3, 10),
+				new XY(4, 0),
+				new XY(6, 0)
+			};
+			// Last few things causing Mis Matched emitters and collectors
+			cells[82][54].setConnections(5);
+			cells[82][55].setConnections(1);
+		}
+
+		if (name.equals("21")) {
+			// Shorts between current sources
+			cells[117][133].setConnections(3);
+			cells[118][133].setConnections(4);
+		}
+
+		if (name.equals("02")) {
+			// Fix emitter not connected to current source
+			cells[134][14].setConnections(7);
+			cells[134][15].setConnections(11);
+			// Fix shorts to VSS
+			cells[108][48].setConnections(5);
+			cells[108][49].setConnections(4);
+			cells[108][93].setConnections(5);
+			cells[108][94].setConnections(4);
+			cells[14][50].setConnections(1);
+			cells[15][50].setConnections(8);
+			cells[74][110].setConnections(1);
+			cells[75][110].setConnections(8);
+			// Shorts near links between cells, causing Mis Matched emitters and
+			// collectors
+			cells[33][160].setConnections(4);
+			cells[33][161].setConnections(5);
+			cells[129][160].setConnections(8);
+			cells[129][161].setConnections(5);
+		}
+
+		if (name.equals("12")) {
+			csShorts = // block 12
+			new XY[] {
+					new XY(0, 1),
+					new XY(0, 2),
+					new XY(0, 4),
+					new XY(0, 5),
+					new XY(0, 6),
+					new XY(0, 7),
+
+					new XY(3, 0),
+					new XY(3, 1),
+					new XY(3, 2),
+					new XY(3, 3),
+					new XY(3, 4),
+					new XY(3, 6),
+					new XY(3, 7),
+					new XY(3, 8),
+					new XY(3, 10),
+					
+					new XY(6, 1),
+					new XY(6, 7),
+			};
+
+			// Fix shorts to VSS
+			cells[123][121].setConnections(5);
+			cells[123][122].setConnections(4);
+			// Self Coupled Gates
+			cells[84][16].setConnections(2);
+			cells[85][16].setConnections(10);
+			cells[84][46].setConnections(2);
+			cells[85][46].setConnections(10);
+			cells[84][76].setConnections(2);
+			cells[85][76].setConnections(10);
+			cells[84][106].setConnections(2);
+			cells[85][106].setConnections(10);
+			// Shorts between current sources
+			cells[14][37].setConnections(3);
+			cells[14][38].setConnections(4);
+			// Non Standard Shorts between current sources
+			cells[27][148].setConnections(3);
+			cells[28][148].setConnections(1);
+
+		}
+		
+		if (name.equals("22")) {
+			// From original overrides list
+			cells[54][152].setConnections(10);
+			// Fix shorts to VSS
+			cells[93][92].setConnections(0);
+			cells[94][92].setConnections(0);
+			cells[95][92].setConnections(10);
+			cells[93][107].setConnections(0);
+			cells[94][107].setConnections(0);
+			cells[95][107].setConnections(10);
+			cells[138][92].setConnections(0);
+			cells[139][92].setConnections(0);
+			cells[140][92].setConnections(10);
+			cells[138][107].setConnections(0);
+			cells[139][107].setConnections(0);
+			cells[140][107].setConnections(10);
+			cells[108][136].setConnections(5);
+			cells[108][137].setConnections(4);
+			// Shorts between current sources
+			cells[12][58].setConnections(3);
+			cells[13][58].setConnections(4);
+			cells[119][43].setConnections(9);
+			cells[119][44].setConnections(0);
+			cells[119][45].setConnections(1);
+			cells[32][9].setConnections(5);
+			cells[32][10].setConnections(4);
+		}
+		
+		XY origin = blockCells.get(name);
+		for (XY loc : csShorts) {
+			cells[origin.getY() + 15 * loc.getY() + 8][origin.getX() + 15 * loc.getX() + 7].clearRight();
+			cells[origin.getY() + 15 * loc.getY() + 8][origin.getX() + 15 * loc.getX() + 8].clearLeft();
+			cells[origin.getY() + 15 * loc.getY() + 8][origin.getX() + 15 * loc.getX() + 8].clearRight();
+			cells[origin.getY() + 15 * loc.getY() + 8][origin.getX() + 15 * loc.getX() + 9].clearLeft();
+		}
+	}
 
 	/****************************************************************
 	 * END OF EXTRACT CODE
@@ -968,240 +1143,7 @@ public class Process {
 		blocks.add(parseBlock(new File(blockBase + "_12.json")));
 		blocks.add(parseBlock(new File(blockBase + "_22.json")));
 		
-		// Fix shorts to VSS
 
-		blocks.get(1)[35][152].setConnections(0);
-		blocks.get(1)[36][152].setConnections(6);
-		blocks.get(1)[37][152].setConnections(5);
-		blocks.get(1)[38][152].setConnections(5);
-
-		blocks.get(1)[96][153].setConnections(8);
-		blocks.get(1)[97][153].setConnections(10);
-
-		blocks.get(1)[52][39].setConnections(15);
-		blocks.get(1)[53][39].setConnections(5);
-		blocks.get(1)[54][39].setConnections(3);
-		
-		blocks.get(6)[108][48].setConnections(5);
-		blocks.get(6)[108][49].setConnections(4);
-
-		blocks.get(6)[108][93].setConnections(5);
-		blocks.get(6)[108][94].setConnections(4);
-
-		blocks.get(6)[14][50].setConnections(1);
-		blocks.get(6)[15][50].setConnections(8);
-
-		blocks.get(6)[74][110].setConnections(1);
-		blocks.get(6)[75][110].setConnections(8);
-
-		blocks.get(7)[123][121].setConnections(5);
-		blocks.get(7)[123][122].setConnections(4);
-		
-		blocks.get(8)[93][92].setConnections(0);
-		blocks.get(8)[94][92].setConnections(0);
-		blocks.get(8)[95][92].setConnections(10);
-
-		blocks.get(8)[93][107].setConnections(0);
-		blocks.get(8)[94][107].setConnections(0);
-		blocks.get(8)[95][107].setConnections(10);
-
-		blocks.get(8)[138][92].setConnections(0);
-		blocks.get(8)[139][92].setConnections(0);
-		blocks.get(8)[140][92].setConnections(10);
-
-		blocks.get(8)[138][107].setConnections(0);
-		blocks.get(8)[139][107].setConnections(0);
-		blocks.get(8)[140][107].setConnections(10);
-
-		blocks.get(8)[108][136].setConnections(5);
-		blocks.get(8)[108][137].setConnections(4);
-		
-		// Fix emitter not connected to current source
-		
-		blocks.get(3)[119][14].setConnections(7);
-		blocks.get(3)[119][15].setConnections(11);
-
-		blocks.get(6)[134][14].setConnections(7);
-		blocks.get(6)[134][15].setConnections(11);
-		
-		// Connected to something unexpected
-		
-		blocks.get(1)[119][73].setConnections(10);
-		blocks.get(1)[120][73].setConnections(4);
-
-		// Danling
-		
-		blocks.get(2)[127][93].setConnections(0);
-		blocks.get(2)[127][94].setConnections(5);
-		blocks.get(2)[127][96].setConnections(0);
-		blocks.get(2)[127][97].setConnections(5);
-		blocks.get(2)[128][96].setConnections(6);
-		blocks.get(2)[128][97].setConnections(9);
-		
-		// Self Coupled Gates
-		
-		blocks.get(1)[146][15].setConnections(5);
-		blocks.get(1)[146][16].setConnections(2);
-
-		blocks.get(7)[84][16].setConnections(2);
-		blocks.get(7)[85][16].setConnections(10);
-
-		blocks.get(7)[84][46].setConnections(2);
-		blocks.get(7)[85][46].setConnections(10);
-
-		blocks.get(7)[84][76].setConnections(2);
-		blocks.get(7)[85][76].setConnections(10);
-
-		blocks.get(7)[84][106].setConnections(2);
-		blocks.get(7)[85][106].setConnections(10);
-		
-		
-		// Shorts between current sources
-
-		
-		
-
-		
-		blocks.get(8)[12][58].setConnections(3);
-		blocks.get(8)[13][58].setConnections(4);
-
-		blocks.get(8)[119][43].setConnections(9);
-		blocks.get(8)[119][44].setConnections(0);
-		blocks.get(8)[119][45].setConnections(1);
-
-		blocks.get(8)[32][9].setConnections(5);
-		blocks.get(8)[32][10].setConnections(4);
-		
-		blocks.get(5)[117][133].setConnections(3);
-		blocks.get(5)[118][133].setConnections(4);
-
-		blocks.get(7)[14][37].setConnections(3);
-		blocks.get(7)[14][38].setConnections(4);
-
-		XY[][] blockNuke = new XY[][] {
-				// block 00
-				new XY[] {
-					// all correct
-						
-				},
-				// block 10
-				new XY[] {
-					new XY(0, 0),
-					new XY(0, 1),
-					new XY(0, 3),
-					new XY(0, 6),
-					new XY(0, 9),
-					new XY(3, 0),
-					new XY(3, 1),
-					new XY(3, 2),
-					new XY(3, 4),
-					new XY(3, 5),
-					new XY(3, 8),
-					new XY(3, 9),
-					new XY(3, 10),
-					new XY(6, 0),
-					new XY(6, 1),
-					new XY(6, 3),
-					new XY(6, 10)
-				},
-				// block 20
-				new XY[] {
-						
-				},
-				// block 01
-				new XY[] {
-						
-				},
-				// block 11
-				new XY[] {
-					new XY(3, 5),
-					new XY(3, 10),
-					new XY(4, 0),
-					new XY(6, 0)
-				},
-				// block 21
-				new XY[] {
-						
-				},
-				// block 02
-				new XY[] {
-					// all correct
-				},
-				// block 12
-				new XY[] {
-						new XY(0, 1),
-						new XY(0, 2),
-						new XY(0, 4),
-						new XY(0, 5),
-						new XY(0, 6),
-						new XY(0, 7),
-
-						new XY(3, 0),
-						new XY(3, 1),
-						new XY(3, 2),
-						new XY(3, 3),
-						new XY(3, 4),
-						new XY(3, 6),
-						new XY(3, 7),
-						new XY(3, 8),
-						new XY(3, 10),
-						
-						new XY(6, 1),
-						new XY(6, 7),
-
-				},
-				// block 22
-				new XY[] {
-						
-				},
-		};
-		
-		
-
-		for (int i = 0; i < blocks.size(); i++) {
-			Cell[][] block = blocks.get(i);
-			String name = "" + (i % 3) + "" + (i / 3);
-			XY origin = blockCells.get(name);
-			for (XY loc : blockNuke[i]) {
-				block[origin.getY() + 15 * loc.getY() + 8][origin.getX() + 15 * loc.getX() + 7].clearRight();
-				block[origin.getY() + 15 * loc.getY() + 8][origin.getX() + 15 * loc.getX() + 8].clearLeft();
-				block[origin.getY() + 15 * loc.getY() + 8][origin.getX() + 15 * loc.getX() + 8].clearRight();
-				block[origin.getY() + 15 * loc.getY() + 8][origin.getX() + 15 * loc.getX() + 9].clearLeft();
-			}
-			
-		}
-
-		// Non Standard Shorts between current sources
-
-		// B12_C91
-		blocks.get(7)[27][148].setConnections(3);
-		blocks.get(7)[28][148].setConnections(1);
-
-
-		// Shorts near links between cells, causing Mis Matched emitters and collectors
-		
-		blocks.get(0)[131][160].setConnections(8);
-		blocks.get(0)[131][161].setConnections(5);
-		
-		blocks.get(1)[125][1].setConnections(5);
-		blocks.get(1)[125][2].setConnections(2);
-		
-		blocks.get(6)[33][160].setConnections(4);
-		blocks.get(6)[33][161].setConnections(5);
-
-		blocks.get(6)[129][160].setConnections(8);
-		blocks.get(6)[129][161].setConnections(5);
-		
-		// Last few things causing Mis Matched emitters and collectors
-		
-		blocks.get(3)[7][94].setConnections(5);
-		blocks.get(3)[7][95].setConnections(2);
-		
-		blocks.get(1)[144][59].setConnections(1);
-		blocks.get(1)[144][60].setConnections(5);
-		
-		blocks.get(4)[82][54].setConnections(5);
-		blocks.get(4)[82][55].setConnections(1);
 		
 		// Extract the width/heights of the blocks
 		int w0 = blocks.get(0)[0].length;
