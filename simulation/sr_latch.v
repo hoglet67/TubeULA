@@ -1,9 +1,9 @@
-module sr_latch(nq, q, s, r);
+module sr_latch(NQ, Q, S, R);
 
-output q, nq;
-input s, r;
+output Q, NQ;
+input S, R;
 
-nor n1(q, s, nq);
-nor n2(nq, r, q);
+nor nor1(Q, S, NQ);
+nor nor2(NQ, R, Q);
 
 endmodule

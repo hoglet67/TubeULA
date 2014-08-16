@@ -10,3 +10,6 @@ java/correctperspective/bin/
 java/correctperspective/build/
 nohup.out
 *log
+simulation/iseconfig/
+simulation/working/
+

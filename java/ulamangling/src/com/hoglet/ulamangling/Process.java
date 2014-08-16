@@ -1233,6 +1233,9 @@ public class Process {
 				System.out.println(path);
 			}
 		}
+		
+		System.out.println("**** Verilog Netlist ****");
+		netlist.toVerilog(new File("tube_ula.v"), "tube_ula");
 	}
 
 	private Cell[][] parseBlock(File blockFile) throws IOException {
@@ -1517,7 +1520,7 @@ public class Process {
 			String id = "G" + collectorNet;
 			Component gate  = netlist.get(id);
 			if (gate == null) {
-				gate = netlist.createComponent("NOR", id);
+				gate = netlist.createComponent(Component.TYPE_NOR, id);
 				gate.addOutput("O", collectorNet);
 			}
 			gate.addInput("I", baseNet);
@@ -1623,11 +1626,11 @@ public class Process {
 			}
 		}
 		for (String input : inputs) {
-			Component component = netlist.createComponent("INPUT", input);
+			Component component = netlist.createComponent(Component.TYPE_INPUT, input);
 			component.addOutput("O", input);
 		}
 		for (String output : outputs) {
-			Component component = netlist.createComponent("OUTPUT", output);
+			Component component = netlist.createComponent(Component.TYPE_OUTPUT, output);
 			component.addInput("I", output);
 		}
 	}

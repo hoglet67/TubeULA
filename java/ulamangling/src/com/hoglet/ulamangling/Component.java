@@ -6,6 +6,12 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 public class Component {
+	
+	public static final String TYPE_INPUT = "INPUT";
+	public static final String TYPE_OUTPUT = "OUTPUT";
+	public static final String TYPE_NOR = "nor";
+	public static final String TYPE_LATCH = "d_latch";
+	public static final String TYPE_SR = "sr_latch";
 
 	private NetList netlist;
 	
@@ -138,10 +144,47 @@ public class Component {
 			}
 		}
 		component += ");";
-		return component;
-		
+		return component;		
 	}
 
+	public String toVerilog() {
+		boolean isPrimitive = type.equals(Component.TYPE_NOR);
+		String component = type + " " + id + "(";
+		boolean first = true;
+		// Outputs
+		for (Map.Entry<String, String> output : outputs.entrySet()) {
+			if (first) {
+				first = false;
+			} else {
+				component += ",";
+			}
+			if (isPrimitive) {
+				component += output.getValue();
+			} else {
+				component += "." + output.getKey() + "(" + output.getValue() + ")";				
+			}
+		}
+		// Inputs
+		for (Map.Entry<String, Collection<String>> input : inputs.entrySet()) {
+			for (String value : input.getValue()) {
+				if (first) {
+					first = false;
+				} else {
+					component += ",";
+				}
+				if (isPrimitive) {
+					component += value;
+				} else {
+					component += "." + input.getKey() + "(" + value + ")";
+				}
+			}
+		}
+		component += ");";
+		return component;		
+	}
 
+	
+	
+	
 
 }

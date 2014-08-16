@@ -1,5 +1,8 @@
 package com.hoglet.ulamangling;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -248,7 +251,7 @@ public class NetList {
 									}
 									
 									
-									Component latch = copy.createComponent("LATCH", "LATCH" + latchnum++);
+									Component latch = copy.createComponent(Component.TYPE_LATCH, "d" + latchnum++);
 									for (String d : data) {
 										latch.addInput("D", d);
 									}
@@ -278,7 +281,7 @@ public class NetList {
 		int latchnum = 0;
 		NetList copy = this.shallowCopy();
 		for (Component gate1 : this.getAll()) {
-			if (!gate1.getType().equals("NOR")) {
+			if (!gate1.getType().equals(Component.TYPE_NOR)) {
 				continue;
 			}
 			String output1 = gate1.getOutput();
@@ -295,7 +298,7 @@ public class NetList {
 				if (gate2 == null) {
 					continue;
 				}
-				if (!gate2.getType().equals("NOR")) {
+				if (!gate2.getType().equals(Component.TYPE_NOR)) {
 					continue;
 				}
 				Collection<String> inputs2 = gate2.getInputs();
@@ -314,7 +317,7 @@ public class NetList {
 					copy.delete(gate1);
 					copy.delete(gate2);
 
-					Component latch = copy.createComponent("SR", "SR" + latchnum++);
+					Component latch = copy.createComponent(Component.TYPE_SR, "sr" + latchnum++);
 					for (String input : inputs1) {
 						if (!input.equals(output2)) {
 							latch.addInput("R", input);
@@ -361,6 +364,81 @@ public class NetList {
 		}
 	}
 	
+	public Collection<String> getInputPins() {
+		return getPins("INPUT");
+	}
+
+	public Collection<String> getOutputPins() {
+		return getPins("OUTPUT");
+	}
+
+	private Collection<String> getPins(String type) {
+		Collection<String> pins = new TreeSet<String>();
+		for (Component c : componentMap.values()) {
+			if (c.getType().equals(type)) {
+				pins.add(c.getId());
+			}
+		}
+		return pins;
+	}
+
+	public void toVerilog(File file, String moduleName) {
+
+		PrintStream stream = null;
+		try {
+			Collection<String> inputPins = getInputPins();
+			Collection<String> outputPins = getOutputPins();
+			Collection<String> allPins = new TreeSet<String>();
+			allPins.addAll(inputPins);
+			allPins.addAll(outputPins);
+			stream = new PrintStream(file);
+			stream.println("module " + moduleName + "(");
+			boolean first = true;
+			for (String pin : allPins) {
+				if (first) {
+					stream.println("      " + pin);
+					first = false;
+				} else {
+					stream.println("    , " + pin);
+				}
+			}
+			stream.println(");");
+
+			stream.println("// Inputs");
+			for (String pin : inputPins) {
+				stream.println("input " + pin + ";");
+			}
+
+			stream.println("// Outputs");
+			for (String pin : outputPins) {
+				stream.println("output " + pin + ";");
+			}
+
+			stream.println("// Wires");
+			for (String net : outputMap.keySet()) {
+				if (!allPins.contains(net)) {
+					stream.println("wire " + net + ";");
+				}
+			}
+			
+			for (Component c : componentMap.values()) {
+				if (c.getType().equals("INPUT") || c.getType().equals("OUTPUT")) {
+					continue;
+				}
+				stream.println(c.toVerilog());
+			}
+
+			stream.println("endmodule");
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			stream.close();
+		}
+
+	}
+}
+	
 //	public void traceNetForward(String net, int depth, List<String> paths, Collection<String> visited) {
 //		if (visited.contains(net)) {
 //			return;
@@ -380,4 +458,4 @@ public class NetList {
 //		}
 //	}
 
-}
+
