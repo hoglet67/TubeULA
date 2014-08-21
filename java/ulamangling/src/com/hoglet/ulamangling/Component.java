@@ -149,7 +149,8 @@ public class Component {
 
 	public String toVerilog() {
 		boolean isPrimitive = type.equals(Component.TYPE_NOR);
-		String component = type + " " + id + "(";
+		String delay = isPrimitive ? "#5 " : "";
+		String component = type + " " + delay + id + "(";
 		boolean first = true;
 		// Outputs
 		for (Map.Entry<String, String> output : outputs.entrySet()) {

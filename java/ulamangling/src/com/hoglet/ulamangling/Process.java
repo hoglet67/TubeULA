@@ -1205,12 +1205,18 @@ public class Process {
 		addIOPins(netlist, inputPins, outputPins);
 
 		// Output for debugging
-		System.out.println("**** Gate Level Netlist ****");
+		System.out.println("**** Gate Level Netlist Stats ****");
 		netlist.dumpStats();
 		netlist.dump();
 
 		// Sanity check we have no gates that feedback to themselves
 		netlist.checkFromSelfCoupledGates();
+
+		System.out.println("**** Gate Level Verilog Netlist ****");
+		netlist.toVerilog(new File("tube_ula_gatelevel.v"), "tube_ula");
+
+		// Prune any output pins that don't drive anything (e.g. unused latch outputs)
+		netlist = netlist.pruneUnconnectedOutputs();
 
 		// Refine the netlist by recognising latches
 		netlist = netlist.replaceWithLatches();
@@ -1220,8 +1226,11 @@ public class Process {
 
 		// Prune any output pins that don't drive anything (e.g. unused latch outputs)
 		netlist = netlist.pruneUnconnectedOutputs();
-		
-		System.out.println("**** Latch Level Netlist ****");
+
+		System.out.println("**** Latch Level Verilog Netlist ****");
+		netlist.toVerilog(new File("tube_ula_latchlevel.v"), "tube_ula");
+
+		System.out.println("**** Latch Level Netlist Stats ****");
 		netlist.dumpStats();
 		netlist.dump();
 
@@ -1234,8 +1243,6 @@ public class Process {
 			}
 		}
 		
-		System.out.println("**** Verilog Netlist ****");
-		netlist.toVerilog(new File("tube_ula.v"), "tube_ula");
 	}
 
 	private Cell[][] parseBlock(File blockFile) throws IOException {

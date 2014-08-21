@@ -154,7 +154,7 @@ public class NetList {
 			for (Map.Entry<String, String> entry : toRemove.entrySet()) {
 				String name = entry.getKey();
 				String net = entry.getValue();
-				System.out.println("Removing unused output " + name + " from " + component.getId());
+				System.out.println("Removing unused output " + name + " driving " + net + " from " + component.getId());
 				component.removeOutput(name, net);
 			}
 		}
