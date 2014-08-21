@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -129,10 +130,10 @@ public class Process {
 				new Pin(147, 5, PinType.IO_IN, "HA2"),
 				new Pin(158, 22, PinType.IO_IN, "HA1"),
 				new Pin(158, 53, PinType.IO_IN, "HA0"),
-				new Pin(158, 83, PinType.IO_IN, "HD7IN"),
+				new Pin(158, 83, PinType.IO_IN_INVERTED, "HD7IN"),
 				new Pin(158, 112, PinType.IO_OUT, "HD7OUT"),
 				new Pin(158, 143, PinType.IO_OUT, "HD6OUT"),
-				new Pin(158, 176, PinType.IO_IN, "HD6IN"),
+				new Pin(158, 176, PinType.IO_IN_INVERTED, "HD6IN"),
 
 				new Pin(26, 5, PinType.IO_OUT, "HDOE"),
 				new Pin(65, 5, PinType.IO_OUT, "HDOE"),
@@ -173,9 +174,9 @@ public class Process {
 		endCells.put("21", new XY(158, 175));
 		ioPinLists.put("21", new Pin[] {
 				new Pin(158, 23, PinType.IO_OUT, "HD5OUT"),
-				new Pin(158, 97, PinType.IO_IN, "HD5IN"),
+				new Pin(158, 97, PinType.IO_IN_INVERTED, "HD5IN"),
 				new Pin(158, 121, PinType.IO_OUT, "HD4OUT"),
-				new Pin(158, 150, PinType.IO_IN, "HD4IN"),
+				new Pin(158, 150, PinType.IO_IN_INVERTED, "HD4IN"),
 				new Pin(158, 0, PinType.IO_OUT, "HDOE"),
 				new Pin(158, 38, PinType.IO_OUT, "HDOE"),
 				new Pin(158, 45, PinType.IO_OUT, "HDOE"),
@@ -214,13 +215,13 @@ public class Process {
 		endCells.put("22", new XY(158, 172));
 		ioPinLists.put("22", new Pin[] {
 				new Pin(158, 3, PinType.IO_OUT, "HD3OUT"),
-				new Pin(158, 32, PinType.IO_IN, "HD3IN"),
+				new Pin(158, 32, PinType.IO_IN_INVERTED, "HD3IN"),
 				new Pin(158, 65, PinType.IO_OUT, "HD2OUT"),
-				new Pin(158, 94, PinType.IO_IN, "HD2IN"),
+				new Pin(158, 94, PinType.IO_IN_INVERTED, "HD2IN"),
 				new Pin(158, 127, PinType.IO_OUT, "HD1OUT"),
-				new Pin(158, 156, PinType.IO_IN, "HD1IN"),
+				new Pin(158, 156, PinType.IO_IN_INVERTED, "HD1IN"),
 				new Pin(155, 172, PinType.IO_OUT, "HD0OUT"),
-				new Pin(119, 172, PinType.IO_IN, "HD0IN"),
+				new Pin(119, 172, PinType.IO_IN_INVERTED, "HD0IN"),
 				new Pin(158, 0, PinType.IO_OUT, "HDOE"),
 				new Pin(158, 43, PinType.IO_OUT, "HDOE"),
 				new Pin(158, 50, PinType.IO_OUT, "HDOE"),
@@ -1200,14 +1201,44 @@ public class Process {
 		NetList netlist = transformToGates();
 		
 		// Add IO Pins
-		Collection<String> inputPins = getInputPins();
-		Collection<String> outputPins = getOutputPins();
-		addIOPins(netlist, inputPins, outputPins);
+		Collection<String> inputPins = getIOPins(PinType.IO_IN);
+		Collection<String> invInputPins = getIOPins(PinType.IO_IN_INVERTED);
+		Collection<String> outputPins = getIOPins(PinType.IO_OUT);
+		
+		// Special case the inverting inputs, to add an inverter
+		for (String in : invInputPins) {
+			String out = "_" + in;
+			// Rename all existing instances of this net
+			netlist.renameNet(in, out);
+			// Add an additional inverter
+			Component inverter = netlist.createComponent(Component.TYPE_NOR, "inv_" + in);
+			inverter.addInput("I", in);
+			inverter.addOutput("O", out);
+			// Treat like a normal input
+			inputPins.add(in);
+		}
+		
+		// Special case the OE  generation as the logic to do this was in the peripheral cells
+		
+		Component hdoeNor = netlist.createComponent(Component.TYPE_NOR, "nor_hdoe");
+		hdoeNor.addInput("I", "HDOEA");
+		hdoeNor.addOutput("O", "HDOE");
+		outputPins.remove("HDOEA");
 
+		Component pdoeNor = netlist.createComponent(Component.TYPE_NOR, "nor_pdoe");
+		pdoeNor.addInput("I", "PDOEA");
+		pdoeNor.addInput("I", "PDOEB");
+		pdoeNor.addOutput("O", "PDOE");
+		outputPins.remove("PDOEA");
+		outputPins.remove("PDOEB");
+
+		// Add the input and output pins to the netlist
+		addIOPins(netlist, inputPins, outputPins);
+		
 		// Output for debugging
 		System.out.println("**** Gate Level Netlist Stats ****");
 		netlist.dumpStats();
-		netlist.dump();
+		netlist.dump(new File("tube_ula_gatelevel.txt"));
 
 		// Sanity check we have no gates that feedback to themselves
 		netlist.checkFromSelfCoupledGates();
@@ -1216,7 +1247,7 @@ public class Process {
 		netlist.toVerilog(new File("tube_ula_gatelevel.v"), "tube_ula");
 
 		// Prune any output pins that don't drive anything (e.g. unused latch outputs)
-		netlist = netlist.pruneUnconnectedOutputs();
+		netlist.pruneUnconnectedOutputs();
 
 		// Refine the netlist by recognising latches
 		netlist = netlist.replaceWithLatches();
@@ -1225,23 +1256,23 @@ public class Process {
 		netlist = netlist.replaceWithSR();
 
 		// Prune any output pins that don't drive anything (e.g. unused latch outputs)
-		netlist = netlist.pruneUnconnectedOutputs();
+		netlist.pruneUnconnectedOutputs();
 
 		System.out.println("**** Latch Level Verilog Netlist ****");
 		netlist.toVerilog(new File("tube_ula_latchlevel.v"), "tube_ula");
 
 		System.out.println("**** Latch Level Netlist Stats ****");
 		netlist.dumpStats();
-		netlist.dump();
+		netlist.dump(new File("tube_ula_latchlevel.txt"));
 
-		for (String net : inputPins) {
-			System.out.println("**** Tracing Path from " + net + " ****");
-			List<String> paths = netlist.traceNetForward(net);
-			System.out.println("**** found " + paths.size() + " paths");
-			for (String path : paths) {
-				System.out.println(path);
-			}
-		}
+//		for (String net : inputPins) {
+//			System.out.println("**** Tracing Path from " + net + " ****");
+//			List<String> paths = netlist.traceNetForward(net);
+//			System.out.println("**** found " + paths.size() + " paths");
+//			for (String path : paths) {
+//				System.out.println(path);
+//			}
+//		}
 		
 	}
 
@@ -1367,8 +1398,7 @@ public class Process {
 		for (int y = 0; y < array.length; y++) {
 			for (int x = 0; x < array[y].length; x++) {
 				Cell cell = array[y][x];
-				// TODO IO_IN is legacy, remove once cell maps have been rebuilt
-				if (cell.getType() == PinType.IO  || cell.getType() == PinType.IO_IN || cell.getType() == PinType.IO_OUT) {
+				if (cell.getType() == PinType.IO_IN  || cell.getType() == PinType.IO_IN_INVERTED || cell.getType() == PinType.IO_OUT) {
 					String name = cell.getPin().getName();
 					if (nameMap.containsKey(cell.getNet())) {
 						String existingName = nameMap.get(cell.getNet());
@@ -1388,35 +1418,45 @@ public class Process {
 		nameToPinMap = new HashMap<String, Collection<String>>();
 		pinToNameMap = new HashMap<String, String>();
 		componentMap = new HashMap<String, Collection<String>>();
-		for (int i = 0; i < blocks.size(); i++) {
-			XY blockOrigin = blockOrigins.get(i);
-			XY cellOffset = cellOffsets.get(i);
-			for (int xi = 0; xi < 10; xi++) {
-				for (int yi = 0; yi < 11; yi++) {
-					int cellx = blockOrigin.getX() + xi * 15 + cellOffset.getX();
-					int celly = blockOrigin.getY() + yi * 15 + cellOffset.getY();
-
-					String id = "B" + (i % 3) + (i / 3) + "_C" + Integer.toHexString(xi) + Integer.toHexString(yi);
-					
-					// Emitter, Base, Collector
-					addComponent(array, cellx, celly, TYPE_TR, id + "_T1", new XY(7, 4), new XY(8, 4), new XY(6, 1));
-					addComponent(array, cellx, celly, TYPE_TR, id + "_T2", new XY(5, 4), new XY(4, 4), new XY(6, 1));
-					addComponent(array, cellx, celly, TYPE_TR, id + "_T3", new XY(4, 8), new XY(4, 7), new XY(1, 8));
-					addComponent(array, cellx, celly, TYPE_TR, id + "_T4", new XY(4, 10), new XY(4, 11), new XY(1, 8));
-					
-					// Emitter1, Emitter2, Base, Collector
-					addComponent(array, cellx, celly, TYPE_CS, id, new XY(7, 8), new XY(9, 8), new XY(8, 9), new XY(8, 10));
-
-					// Resistors
-					addComponent(array, cellx, celly, TYPE_RL, id + "_RLA", new XY(12, 3), new XY(12, 7));
-					addComponent(array, cellx, celly, TYPE_RCS, id + "_RCS", new XY(12, 9), new XY(12, 13));
-					addComponent(array, cellx, celly, TYPE_RL, id + "_RLB", new XY(8, 13), new XY(12, 13));
+		PrintStream stream = null;
+		try {
+			stream = new PrintStream(new File("tube_ula_transistors.txt"));
+			for (int i = 0; i < blocks.size(); i++) {
+				XY blockOrigin = blockOrigins.get(i);
+				XY cellOffset = cellOffsets.get(i);
+				for (int xi = 0; xi < 10; xi++) {
+					for (int yi = 0; yi < 11; yi++) {
+						int cellx = blockOrigin.getX() + xi * 15 + cellOffset.getX();
+						int celly = blockOrigin.getY() + yi * 15 + cellOffset.getY();
+	
+						String id = "B" + (i % 3) + (i / 3) + "_C" + Integer.toHexString(xi) + Integer.toHexString(yi);
+						
+						// Emitter, Base, Collector
+						addComponent(stream, array, cellx, celly, TYPE_TR, id + "_T1", new XY(7, 4), new XY(8, 4), new XY(6, 1));
+						addComponent(stream, array, cellx, celly, TYPE_TR, id + "_T2", new XY(5, 4), new XY(4, 4), new XY(6, 1));
+						addComponent(stream, array, cellx, celly, TYPE_TR, id + "_T3", new XY(4, 8), new XY(4, 7), new XY(1, 8));
+						addComponent(stream, array, cellx, celly, TYPE_TR, id + "_T4", new XY(4, 10), new XY(4, 11), new XY(1, 8));
+						
+						// Emitter1, Emitter2, Base, Collector
+						addComponent(stream, array, cellx, celly, TYPE_CS, id, new XY(7, 8), new XY(9, 8), new XY(8, 9), new XY(8, 10));
+	
+						// Resistors
+						addComponent(stream, array, cellx, celly, TYPE_RL, id + "_RLA", new XY(12, 3), new XY(12, 7));
+						addComponent(stream, array, cellx, celly, TYPE_RCS, id + "_RCS", new XY(12, 9), new XY(12, 13));
+						addComponent(stream, array, cellx, celly, TYPE_RL, id + "_RLB", new XY(8, 13), new XY(12, 13));
+					}
 				}
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if (stream != null) {
+				stream.close();				
 			}
 		}
 	}
 
-	private void addComponent(Cell[][] array, int cellx, int celly, String type, String id, XY... pins) {
+	private void addComponent(PrintStream stream, Cell[][] array, int cellx, int celly, String type, String id, XY... pins) {
 		String component = type + " " + id + "(";
 		boolean first = true;
 
@@ -1490,9 +1530,9 @@ public class Process {
 		component += ");";
 
 		if (allUsed) {
-			System.out.println(component);
+			stream.println(component);
 		} else {
-			System.out.println("# " + component);
+			stream.println("# " + component);
 		}
 	}
 	
@@ -1586,52 +1626,29 @@ public class Process {
 			}
 			
 			if (linkedCollectors.size() != linkedEmitters.size()) {
-				System.out.println("Different numbers of emitters and collectors linked: " + linkedEmitters + " and " + linkedCollectors);
+				System.err.println("Different numbers of emitters and collectors linked: " + linkedEmitters + " and " + linkedCollectors);
 			} else if (!linkedCollectors.equals(linkedEmitters)) {
-				System.out.println("Different emitters and collectors linked: " + linkedEmitters + " and " + linkedCollectors);
+				System.err.println("Different emitters and collectors linked: " + linkedEmitters + " and " + linkedCollectors);
 			}
 		}
 		
 		return netlist;
 
 	}
-
-	private Collection<String> getInputPins() {
-		Collection<String> inputs = new TreeSet<String>();
+	
+	private Collection<String> getIOPins(PinType type) {
+		Collection<String> ioPins = new TreeSet<String>();
 		for (Pin pins[] : ioPinLists.values()) {
 			for (Pin pin : pins) {
-				if (pin.getType() == PinType.IO_IN) {
-					inputs.add(pin.getName());
+				if (pin.getType() == type) {
+					ioPins.add(pin.getName());
 				}
 			}
 		}
-		return inputs;
-		
-	}
-
-	private Collection<String> getOutputPins() {
-		Collection<String> outputs = new TreeSet<String>();
-		for (Pin pins[] : ioPinLists.values()) {
-			for (Pin pin : pins) {
-				if (pin.getType() == PinType.IO_OUT) {
-					outputs.add(pin.getName());
-				}
-			}
-		}
-		return outputs;
+		return ioPins;
 	}
 
 	private void addIOPins(NetList netlist, Collection<String> inputs, Collection<String> outputs) {
-		for (Pin pins[] : ioPinLists.values()) {
-			for (Pin pin : pins) {
-				if (pin.getType() == PinType.IO_IN) {
-					inputs.add(pin.getName());
-				}
-				if (pin.getType() == PinType.IO_OUT) {
-					outputs.add(pin.getName());
-				}
-			}
-		}
 		for (String input : inputs) {
 			Component component = netlist.createComponent(Component.TYPE_INPUT, input);
 			component.addOutput("O", input);

@@ -8,7 +8,6 @@ reg DACK;
 reg [2:0] HA;
 reg HCS;
 reg [7:0] HDIN;
-wire [7:0] HDININV;
 wire HO2;
 
 reg HO2early;
@@ -35,8 +34,6 @@ wire PIRQ;
 wire PNMI;
 wire PRST;
 
-assign HDININV = ~HDIN;
-
    task host_write;
       input [2:0] addr;
       input [7:0] data;
@@ -56,11 +53,16 @@ assign HDININV = ~HDIN;
     
     task host_read;
       input [2:0] addr;
+      input [7:0] expected_mask;
+      input [7:0] expected_data;
       begin
         @ (negedge HO2);
         HA = addr;
         HRW = 1;
         HCS = 0;
+        @ (posedge HO2);        
+        if ((HDOUT & expected_mask) != expected_data)
+            $display("%0dns: host addr %0d data error detected; expected_mask = %b; expected_data = %b; actual_data = %b", $time, HA, expected_mask, expected_data, HDOUT);
         @ (negedge HO2);        
         HCS = 1;
         HA = 3'bXXX;
@@ -87,12 +89,17 @@ assign HDININV = ~HDIN;
 
     task para_read;
       input [2:0] addr;
+      input [7:0] expected_mask;
+      input [7:0] expected_data;
       begin
         @ (negedge HO2);
         PA = addr;
         PNRDS = 0;
         PCS = 0;
-        @ (negedge HO2);        
+        @ (posedge HO2);
+        if ((PDOUT & expected_mask) != expected_data)
+            $display("%0dns: para addr %0d data error detected; expected_mask = %b; expected_data = %b; actual_data = %b", $time, PA, expected_mask, expected_data, PDOUT);
+        @ (negedge HO2);
         PCS = 1;
         PA = 3'bXXX;
         PNRDS = 1;
@@ -114,20 +121,25 @@ assign HDININV = ~HDIN;
         input [2:0] fifo;
         input integer num;
         begin
-            host_read(status);
-            para_read(status);
+            $display("%0dns: Testing host to para status=%0d, fifo=%0d, num=%0d", $time, status, fifo, num);
+            // Initial FIFO state should be empty
+            // Bit 7 is Available, Bit 6 is not full
+            host_read(status, 8'b11000000, 8'b01000000);
+            para_read(status, 8'b11000000, 8'b01000000);
             for (i = 0; i < num; i = i + 1)
             begin
                 host_write(fifo, 170 + i); // write to host
             end
-            host_read(status);
-            para_read(status);
+            // Intermediate FIFO state should be full
+            host_read(status, 8'b11000000, 8'b00000000);
+            para_read(status, 8'b11000000, 8'b11000000);
             for (i = 0; i < num; i = i + 1)
             begin
-                para_read(fifo);         // read from para
+                para_read(fifo, 8'b11111111, 170 + i);         // read from para
             end
-            host_read(status);
-            para_read(status);        
+            // Initial FIFO state should be empty
+            host_read(status, 8'b11000000, 8'b01000000);
+            para_read(status, 8'b11000000, 8'b01000000);
         end
     endtask
     
@@ -136,20 +148,25 @@ assign HDININV = ~HDIN;
         input [2:0] fifo;
         input integer num;
         begin
-            para_read(status);
-            host_read(status);
+            $display("%0dns: Testing para to host status=%0d, fifo=%0d, num=%0d", $time, status, fifo, num);
+            // Initial FIFO state should be empty
+            // Bit 7 is Available, Bit 6 is not full            
+            para_read(status, 8'b11000000, 8'b01000000);
+            host_read(status, 8'b11000000, 8'b01000000);
             for (i = 0; i < num; i = i + 1)
             begin
                 para_write(fifo, 170 + i); // write to para
             end
-            para_read(status);
-            host_read(status);
+            // Intermediate FIFO state should be full
+            para_read(status, 8'b11000000, 8'b00000000);
+            host_read(status, 8'b11000000, 8'b11000000);
             for (i = 0; i < num; i = i + 1)
             begin
-                host_read(fifo);     // read from host
+                host_read(fifo, 8'b11111111, 170 + i);     // read from host
             end
-            para_read(status);
-            host_read(status);        
+            // Initial FIFO state should be empty
+            para_read(status, 8'b11000000, 8'b01000000);
+            host_read(status, 8'b11000000, 8'b01000000);
         end
     endtask
     
@@ -164,14 +181,14 @@ tube_ula U1 (
     .HA1(HA[1]),
     .HA0(HA[0]),
     .HCS(HCS),
-    .HD7IN(HDININV[7]),
-    .HD6IN(HDININV[6]),
-    .HD5IN(HDININV[5]),
-    .HD4IN(HDININV[4]),
-    .HD3IN(HDININV[3]),
-    .HD2IN(HDININV[2]),
-    .HD1IN(HDININV[1]),
-    .HD0IN(HDININV[0]),
+    .HD7IN(HDIN[7]),
+    .HD6IN(HDIN[6]),
+    .HD5IN(HDIN[5]),
+    .HD4IN(HDIN[4]),
+    .HD3IN(HDIN[3]),
+    .HD2IN(HDIN[2]),
+    .HD1IN(HDIN[1]),
+    .HD0IN(HDIN[0]),
     .HO2(HO2early),
     .HRST(HRST),
     .HRW(HRW),
@@ -252,7 +269,7 @@ initial
         host_write(3'b000, 8'b00100000);
         host_write(3'b000, 8'b10100000);
         host_write(3'b000, 8'b00100000);
-        host_read(3'b000);
+        host_read(3'b000, 0, 0);
         delay(10);
 
         // Get rid of X's from address pointers
@@ -266,33 +283,46 @@ initial
         host_write(3'b000, 8'b11000000);
         delay(50);
         
-//        para_write(3'b101, 8'b11111111);
-//        host_read(3'b101);
-//        host_write(3'b101, 8'b11111111);
-//        para_read(3'b101);
-//        delay(10);
-//        
         // De-Assert  soft reset
         host_write(3'b000, 8'b01000000);
         delay(10);
 
-//        host_read(3'b101);
-//        para_read(3'b101);
-//        delay(10);
-
         // Disable all interrupts
-        host_write(3'b000, 8'b00011111);
+        host_write(3'b000, 8'b10001111);
 
-        // Set two byte mode for register 3
-        host_write(3'b000, 8'b10010000);
-        host_read(3'b000);
+        // Clear two byte mode for register 3
+        host_write(3'b000, 8'b00010000);
+        
+        // Check the control bits are as expected
+        host_read(3'b000, 8'b00111111, 8'b000000);
 
 
         // Read the junk byte out of register 3
-        host_read(3'b101);
 
+        host_read(3'b101, 0, 0);
+        para_read(3'b101, 0, 0);
+        para_read(3'b101, 0, 0);
 
-
+//        host_read(3'b100, 0, 0);
+//        para_read(3'b100, 0, 0);
+//        host_read(3'b101, 0, 0);
+//        host_read(3'b100, 0, 0);
+//        para_read(3'b100, 0, 0);
+//        host_read(3'b101, 0, 0);
+//        host_read(3'b100, 0, 0);
+//        para_read(3'b100, 0, 0);
+//        host_read(3'b101, 0, 0);
+//        host_read(3'b100, 0, 0);
+//        para_read(3'b100, 0, 0);
+//        para_read(3'b101, 0, 0);
+//        host_read(3'b100, 0, 0);
+//        para_read(3'b100, 0, 0);
+//        para_read(3'b101, 0, 0);
+//        host_read(3'b100, 0, 0);
+//        para_read(3'b100, 0, 0);
+//        para_read(3'b101, 0, 0);
+//        host_read(3'b100, 0, 0);
+//        para_read(3'b100, 0, 0);
         delay(10);
         
         

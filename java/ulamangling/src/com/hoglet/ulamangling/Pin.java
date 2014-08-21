@@ -18,7 +18,7 @@ public class Pin extends XY {
 		RES,
 		TR_EMITTER,
 		TR_BASE,
-		IO,
+		IO_IN_INVERTED,
 		IO_IN,
 		IO_OUT,
 		LINK_L,
@@ -187,8 +187,8 @@ public class Pin extends XY {
 		switch (type) {
 		case RES:
 			return "R";
-		case IO:
 		case IO_IN:
+		case IO_IN_INVERTED:
 			return "I";
 		case IO_OUT:
 			return "O";

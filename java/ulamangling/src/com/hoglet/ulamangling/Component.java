@@ -54,6 +54,16 @@ public class Component {
 		netlist.addComponentInput(net, this);
 	}
 
+	public void removeInput(String name, String net) {
+		if (!inputs.containsKey(name)) {
+			throw new RuntimeException("Component input " + name + " is missing or not connected:" + toString());
+		}
+		Collection<String> inputNets = inputs.get(name);		
+		inputNets.remove(net);
+		netlist.removeComponentInput(net, this);
+	}
+
+	
 	public void addOutput(String name, String net) {
 		if (outputs.containsKey(name)) {
 			throw new RuntimeException("Component output " + name + " is already connected:" + toString());
@@ -116,6 +126,10 @@ public class Component {
 		return outputs.values();
 	}
 	
+	public Collection<Map.Entry<String, Collection<String>>> getNamedInputs() {
+		return inputs.entrySet();
+	}
+
 	public Collection<Map.Entry<String, String>> getNamedOutputs() {
 		return outputs.entrySet();
 	}
@@ -184,8 +198,8 @@ public class Component {
 		return component;		
 	}
 
-	
-	
-	
+	public void setNetlist(NetList netlist) {
+		this.netlist = netlist;
+	}
 
 }

@@ -28,12 +28,15 @@ public class NetList {
 	
 	private NetList shallowCopy() {
 		NetList netlist = new NetList();
-		netlist.componentMap.putAll(this.componentMap);
-		netlist.outputMap.putAll(this.outputMap);
-		netlist.inputMap.putAll(this.inputMap);
+		netlist.componentMap.putAll(componentMap);
+		netlist.outputMap.putAll(outputMap);
+		netlist.inputMap.putAll(inputMap);
+		for (Component c : getAll()) {
+			c.setNetlist(netlist);
+		}
 		return netlist;
 	}
-	
+		
 	public Component createComponent(String type, String id) {
 		if (componentMap.containsKey(id)) {
 			throw new RuntimeException("Netlist already contains " + id);
@@ -50,6 +53,11 @@ public class NetList {
 			inputMap.put(net, inputs);
 		}
 		inputs.add(component);
+	}
+
+	protected void removeComponentInput(String net, Component component) {
+		Collection<Component> inputs = inputMap.get(net);
+		inputs.remove(component);
 	}
 
 	protected void addComponentOutput(String net, Component component) {
@@ -94,12 +102,23 @@ public class NetList {
 	/**
 	 * Output the components in the netlist
 	 */
-	public void dump() {
-		for (Component component : componentMap.values()) {
-			System.out.println(component);
+	public void dump(File file) {
+		PrintStream stream = null;
+		try {
+			stream = new PrintStream(file);
+			dump(stream);
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			stream.close();
 		}
 	}
 
+	public void dump(PrintStream stream) {
+		for (Component component : componentMap.values()) {
+			stream.println(component);
+		}
+	}
 	
 	/**
 	 * Output the distribution of components in the netlist
@@ -124,7 +143,7 @@ public class NetList {
 	public void checkFromSelfCoupledGates() {
 		// Look for gates that feed back to themselves
 		int selfCoupledCount= 0;
-		for (Component gate1 : this.getAll()) {
+		for (Component gate1 : getAll()) {
 			if (gate1.getOutput() == null) {
 				continue;
 			}
@@ -138,9 +157,8 @@ public class NetList {
 		System.out.println("Found a total of " + selfCoupledCount + " self coupled gates");
 	}
 	
-	public NetList pruneUnconnectedOutputs() {
-		NetList copy = this.shallowCopy();
-		for (Component component : this.getAll()) {
+	public void pruneUnconnectedOutputs() {
+		for (Component component : getAll()) {
 			Map<String, String> toRemove = new HashMap<String, String>();
 			for (Map.Entry<String, String> entry : component.getNamedOutputs()) {
 				String name = entry.getKey();
@@ -158,17 +176,16 @@ public class NetList {
 				component.removeOutput(name, net);
 			}
 		}
-		return copy;
 	}	
 	
 	public NetList replaceWithLatches() {
 		int latchnum = 0;
 		// Look for cross coupled gates
 		
-		NetList copy = this.shallowCopy();
+		NetList copy = shallowCopy();
 
 		int crossCoupledCount = 0;
-		for (Component gate1 : this.getAll()) {
+		for (Component gate1 : getAll()) {
 			String output1 = gate1.getOutput();
 			if (gate1.getOutput() == null) {
 				continue;
@@ -179,7 +196,7 @@ public class NetList {
 				continue;
 			}
 			for (String output2 : inputs1) {
-				Component gate2 = this.getSource(output2);
+				Component gate2 = getSource(output2);
 				if (gate2 == null) {
 					continue;
 				}
@@ -203,7 +220,7 @@ public class NetList {
 						if (driver1.equals(output2)) {
 							continue;
 						}
-						Component gateDriver1 = this.getSource(driver1);
+						Component gateDriver1 = getSource(driver1);
 						if (gateDriver1 == null) {
 							System.err.println("No driver for " + driver1);
 							continue;
@@ -213,7 +230,7 @@ public class NetList {
 							if (driver2.equals(output1)) {
 								continue;
 							}
-							Component gateDriver2 = this.getSource(driver2);
+							Component gateDriver2 = getSource(driver2);
 							if (gateDriver2 == null) {
 								System.err.println("No driver for " + driver2);
 								continue;
@@ -279,8 +296,8 @@ public class NetList {
 
 	public NetList replaceWithSR() {
 		int latchnum = 0;
-		NetList copy = this.shallowCopy();
-		for (Component gate1 : this.getAll()) {
+		NetList copy = shallowCopy();
+		for (Component gate1 : getAll()) {
 			if (!gate1.getType().equals(Component.TYPE_NOR)) {
 				continue;
 			}
@@ -294,7 +311,7 @@ public class NetList {
 				if (output2.compareTo(output1) < 0) {
 					continue;
 				}
-				Component gate2 = this.getSource(output2);
+				Component gate2 = getSource(output2);
 				if (gate2 == null) {
 					continue;
 				}
@@ -365,11 +382,11 @@ public class NetList {
 	}
 	
 	public Collection<String> getInputPins() {
-		return getPins("INPUT");
+		return getPins(Component.TYPE_INPUT);
 	}
-
+	
 	public Collection<String> getOutputPins() {
-		return getPins("OUTPUT");
+		return getPins(Component.TYPE_OUTPUT);
 	}
 
 	private Collection<String> getPins(String type) {
@@ -437,25 +454,26 @@ public class NetList {
 		}
 
 	}
-}
 	
-//	public void traceNetForward(String net, int depth, List<String> paths, Collection<String> visited) {
-//		if (visited.contains(net)) {
-//			return;
-//		}
-//		visited.add(net);
-//		Collection<Component> components = inputMap.get(net);
-//		for (Component c : components) {
-//			String path = "";
-//			for (int i = 0; i < depth; i++) {
-//				path += " ";
-//			}
-//			path += net + " => " + c.getId();
-//			paths.add(path);
-//			for (String output : c.getOutputs()) {
-//				traceNetForward(output, depth + 1, paths, visited);
-//			}
-//		}
-//	}
-
-
+	
+	public void renameNet(String from, String to) {
+		for (Component c : getAll()) {
+			for (Map.Entry<String, Collection<String>> input : c.getNamedInputs()) {
+				String name = input.getKey();
+				Collection<String> nets = input.getValue();
+				if (nets.contains(from)) {
+					c.removeInput(name, from);
+					c.addInput(name, to);
+				}
+			}
+			for (Map.Entry<String, String> output : c.getNamedOutputs()) {
+				String name = output.getKey();
+				String net = output.getValue();
+				if (net.equals(from)) {
+					c.removeOutput(name, from);
+					c.addOutput(name, to);
+				}
+			}			
+		}
+	}
+}
