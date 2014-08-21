@@ -241,15 +241,15 @@ integer i;
 initial
     begin
         DACK = 1;
-        HA = 0;
+        HA = 3'bXXX;
         HCS = 1;
         HDIN = 8'bXXXXXXXX;
         HO2early = 0;
         HRST = 1;
         HRW = 1;
-        PA = 0;
+        PA = 3'bXXX;
         PCS = 1;
-        PDIN = 0;
+        PDIN = 8'bXXXXXXXX;
         PNRDS = 1;
         PNWDS = 1;
 
@@ -288,41 +288,19 @@ initial
         delay(10);
 
         // Disable all interrupts
-        host_write(3'b000, 8'b10001111);
+        host_write(3'b000, 8'b00001111);
 
-        // Clear two byte mode for register 3
-        host_write(3'b000, 8'b00010000);
+        // Set two byte mode for register 3
+        host_write(3'b000, 8'b10100000);
         
         // Check the control bits are as expected
-        host_read(3'b000, 8'b00111111, 8'b000000);
+        host_read(3'b000, 8'b00111111, 8'b00100000);
 
 
         // Read the junk byte out of register 3
-
         host_read(3'b101, 0, 0);
         para_read(3'b101, 0, 0);
         para_read(3'b101, 0, 0);
-
-//        host_read(3'b100, 0, 0);
-//        para_read(3'b100, 0, 0);
-//        host_read(3'b101, 0, 0);
-//        host_read(3'b100, 0, 0);
-//        para_read(3'b100, 0, 0);
-//        host_read(3'b101, 0, 0);
-//        host_read(3'b100, 0, 0);
-//        para_read(3'b100, 0, 0);
-//        host_read(3'b101, 0, 0);
-//        host_read(3'b100, 0, 0);
-//        para_read(3'b100, 0, 0);
-//        para_read(3'b101, 0, 0);
-//        host_read(3'b100, 0, 0);
-//        para_read(3'b100, 0, 0);
-//        para_read(3'b101, 0, 0);
-//        host_read(3'b100, 0, 0);
-//        para_read(3'b100, 0, 0);
-//        para_read(3'b101, 0, 0);
-//        host_read(3'b100, 0, 0);
-//        para_read(3'b100, 0, 0);
         delay(10);
         
         
